@@ -40,7 +40,10 @@ make -j"$(nproc)"
 # supported way to consume PJSUA2 from Android Java/Kotlin applications.
 command -v swig >/dev/null
 cd pjsip-apps/src/swig
-make -j"$(nproc)"
+# Build only the Java/PJSUA2 bindings. The default Android SWIG target also
+# builds the Xamarin/C# wrapper, which copies optional camera helper sources
+# that are absent in this audio-only build and causes CI to fail.
+make java -j"$(nproc)"
 
 GENERATED="java/android/pjsua2/src/main"
 test -d "$GENERATED/jniLibs/$TARGET_ABI"
