@@ -16,6 +16,15 @@ android {
         versionName = "0.1.0"
     }
 
+    sourceSets {
+        getByName("main") {
+            // Populated by the PJSIP build job in CI. The app remains buildable
+            // from Android Studio without native binaries for UI-only work.
+            jniLibs.srcDir(layout.buildDirectory.dir("pjsip/jniLibs"))
+            java.srcDir(layout.buildDirectory.dir("pjsip/java"))
+        }
+    }
+
     buildFeatures { compose = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
