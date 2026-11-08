@@ -1,0 +1,11 @@
+********* Start testing of UiTests *********
+Config: Using QtTest library 5.15.18, Qt 5.15.18 (x86_64-little_endian-llp64 shared (dynamic) release build; by GCC 16.1.0), windows 10
+QSYSTEM: UiTests::initTestCase() EnableNonClientDpiScaling() failed for HWND 0x50098 (120) (Call not implemented.)
+PASS   : UiTests::initTestCase()
+PASS   : UiTests::realBrandAssetsAreEmbedded()
+PASS   : UiTests::navigationAndRealRecordings()
+PASS   : UiTests::dialPadAndHardwareKeyboard()
+PASS   : UiTests::networkProfileIsReadOnly()
+PASS   : UiTests::cleanupTestCase()
+Totals: 6 passed, 0 failed, 0 skipped, 0 blacklisted, 2045ms
+********* Finished testing of UiTests *********

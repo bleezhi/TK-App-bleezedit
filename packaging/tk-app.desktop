@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=TK App
+Comment=Klient sieci VoIP SIP Telekomunikacja Kaliska (UDP/5060)
+Exec=tk-app
+Icon=tk-app
+Terminal=false
+Categories=Network;Telephony;
+StartupWMClass=tk-app

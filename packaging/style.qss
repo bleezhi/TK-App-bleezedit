@@ -1,0 +1,117 @@
+/* TK App — Telekomunikacja Kaliska. Navy, brick red and heraldic gold. */
+QWidget { color:#18374c; font-size:13px; background:#f4f6f8; }
+QMainWindow { background:#f4f6f8; }
+QDialog { background:#f8fafb; }
+QWidget#mainArea, QStackedWidget, QScrollArea, QScrollArea>QWidget>QWidget { background:#f4f6f8; border:none; }
+QFrame#sidebar { background:#ffd000; border:none; }
+QFrame#sidebar QWidget, QFrame#sidebar QLabel { background:transparent; color:#d4dee7; border:none; }
+QLabel#appBrand { color:#ffffff; font-size:25px; font-weight:700; }
+QLabel#networkBrand { color:#d0dce7; font-size:11px; }
+QLabel#sideEyebrow { color:#91a5b7; font-size:10px; font-weight:600; }
+QLabel#sideServer { color:#ffffff; font-size:14px; font-weight:600; }
+QLabel#sideProtocol { color:#edce7f; font-size:11px; }
+QLabel#sideVersion { color:#839bab; font-size:10px; }
+QLabel#pageTitle { color:#17364c; font-size:28px; font-weight:700; }
+QLabel#pageSubtitle { color:#798b99; font-size:12px; }
+QLabel#sectionTitle { color:#1c3c51; font-size:16px; font-weight:600; }
+QLabel#eyebrow { color:#81929e; font-size:10px; font-weight:600; }
+QLabel#muted { color:#7a8d9b; font-size:11px; }
+QLabel#hint { color:#8a9aa5; font-size:10px; }
+QLabel#status { color:#7a8d9b; font-size:12px; }
+QLabel#connectionStatus { color:#667c8c; background:#e9eef2; border-radius:13px; padding:7px 12px; font-size:11px; font-weight:600; }
+QLabel#callPeer { color:#18374c; font-size:27px; font-weight:600; }
+QLabel#clock { color:#bc2b29; font-size:20px; font-weight:600; }
+QLabel#emptyTitle { color:#9aaab5; font-size:15px; }
+QLabel#emptyNote { color:#91a2ae; font-size:12px; }
+QLabel#notice { color:#947126; background:#fff8e6; border:1px solid #f0dfb4; border-radius:8px; padding:12px; }
+QLabel#errorBanner { color:#a42c2b; background:#fceceb; border:1px solid #f0c9c5; border-radius:9px; padding:11px 15px; }
+QFrame#card { background:#ffffff; border:1px solid #e1e7ed; border-radius:13px; }
+QFrame#card QLabel, QFrame#card QWidget { background:transparent; }
+QFrame#callCard { background:#ffffff; border:1px solid #e1e7ed; border-top:3px solid #d2ad56; border-radius:13px; }
+QFrame#callCard QLabel { background:transparent; }
+QPushButton { color:#466276; background:#ffffff; border:1px solid #dbe3e9; border-radius:8px; padding:9px 14px; font-weight:500; }
+QPushButton:hover { background:#eef3f7; border-color:#acc1d1; }
+QPushButton:pressed { background:#e2ebf2; }
+QPushButton:focus, QLineEdit:focus, QComboBox:focus, QSpinBox:focus { border:1px solid #28759c; }
+QPushButton:disabled { background:#f4f6f8; border-color:#e2e7ec; color:#aab8c2; }
+QPushButton#primary { background:#c42a26; border-color:#c42a26; color:white; font-weight:600; }
+QPushButton#primary:hover { background:#a9211e; border-color:#a9211e; }
+QPushButton#primary:disabled { background:#ecd2d0; border-color:#ecd2d0; color:#ad7774; }
+QPushButton#danger { background:#fff4f3; color:#bf3b35; border-color:#eccdca; }
+QPushButton#danger:disabled { background:#f6f3f3; color:#b9a7a7; border-color:#e8e0e0; }
+QPushButton#outline { border-color:#bdcfdd; color:#1c5c80; }
+QPushButton#recordAction { border-color:#e6c7c3; background:#fff8f7; color:#b53a35; }
+QPushButton#recordAction:disabled { background:#f5f7f9; border-color:#e2e7ec; color:#a3afb8; }
+QPushButton:checked { background:#f9ece8; border-color:#ddb5a9; color:#a53c2b; }
+QPushButton#nav { text-align:left; background:transparent; border:none; color:#a9bccb; padding:12px 11px; border-radius:8px; font-size:12px; }
+QPushButton#nav:hover { color:white; background:#193b55; }
+QPushButton#nav:checked { background:#21445d; color:#ffffff; border-left:3px solid #e6bd5b; padding-left:8px; }
+QPushButton#nav:disabled { color:#5d7c92; }
+QPushButton#sidebarSettings { text-align:left; color:#a9bccb; background:transparent; border:1px solid #2b4a61; padding:10px 15px; }
+QPushButton#sidebarSettings:hover { color:white; background:#193b55; }
+QPushButton#sidebarSettings:disabled { color:#5d7c92; border-color:#24455d; }
+QLineEdit, QSpinBox, QComboBox { background:#ffffff; color:#284b62; border:1px solid #dbe3e9; border-radius:7px; padding:9px 10px; selection-background-color:#d7eaf4; selection-color:#17384c; }
+QLineEdit:read-only { background:#f0f4f7; color:#637e91; }
+QLineEdit#fixedProfile { color:#24688c; background:#edf5f9; }
+QLineEdit#dialNumber { font-size:29px; color:#16374f; background:#f8fafc; border:1px solid #e2e9ef; }
+QComboBox { min-height:19px; }
+QComboBox::drop-down { width:22px; border:none; }
+QComboBox QAbstractItemView { background:white; color:#26485e; selection-background-color:#e6f1f7; border:1px solid #dbe3e9; }
+QCheckBox { background:transparent; spacing:8px; color:#668092; font-size:11px; }
+QCheckBox::indicator { width:17px; height:17px; border:1px solid #c7d5df; border-radius:4px; background:white; }
+QCheckBox::indicator:checked { background:#c42a26; border:3px solid #e4b7b4; }
+QTabWidget::pane { border:1px solid #e1e7ed; background:white; border-radius:10px; }
+QTabBar::tab { color:#7890a1; background:#eef2f6; padding:10px 18px; border:none; margin-right:4px; border-top-left-radius:8px; border-top-right-radius:8px; }
+QTabBar::tab:selected { background:white; color:#bc2926; }
+QListWidget, QPlainTextEdit, QTreeWidget { background:white; color:#496578; border:none; border-radius:10px; padding:10px; selection-background-color:#e8f1f7; selection-color:#153b56; }
+QListWidget::item { padding:11px 8px; border-bottom:1px solid #edf1f5; }
+QTreeWidget::item { padding:12px 4px; border-bottom:1px solid #edf1f5; }
+QHeaderView::section { background:#f6f8fa; color:#7e91a0; padding:12px 8px; border:none; border-bottom:1px solid #e4eaf0; font-size:11px; }
+QFrame#separator { border:none; border-top:1px solid #e6ebef; max-height:1px; }
+QFrame#sideSeparator { background:#2a485d; border:none; max-height:1px; }
+QScrollBar:vertical { background:#edf1f4; width:8px; margin:2px; }
+QScrollBar::handle:vertical { background:#c0cdd8; border-radius:3px; min-height:24px; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height:0; }
+QMenu { background:white; color:#2a4c62; border:1px solid #d6e1e9; padding:5px; }
+QMenu::item { padding:9px 18px; }
+QMenu::item:selected { background:#eaf1f6; }
+QToolTip { background:#17384e; color:white; border:none; padding:6px 9px; }
+
+/* Żółty pasek boczny */
+QFrame#sidebar {
+    background: #ffd000;
+}
+
+/* Wszystkie napisy na pasku */
+QFrame#sidebar QLabel {
+    color: #000000;
+}
+
+/* Przyciski nawigacji i ustawień */
+QFrame#sidebar QPushButton#nav,
+QFrame#sidebar QPushButton#sidebarSettings {
+    background: transparent;
+    color: #000000;
+    border: none;
+}
+
+/* Najechanie kursorem */
+QFrame#sidebar QPushButton#nav:hover,
+QFrame#sidebar QPushButton#sidebarSettings:hover {
+    background: #ffe36b;
+    color: #000000;
+}
+
+/* Aktualnie wybrana zakładka */
+QFrame#sidebar QPushButton#nav:checked {
+    background: #e6ba00;
+    color: #000000;
+    border-left: 3px solid #000000;
+    padding-left: 8px;
+}
+
+/* Wciśnięcie przycisku */
+QFrame#sidebar QPushButton#nav:pressed,
+QFrame#sidebar QPushButton#sidebarSettings:pressed {
+    background: #d4ac00;
+}

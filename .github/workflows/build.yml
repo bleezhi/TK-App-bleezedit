@@ -1,0 +1,46 @@
+name: Build TK App
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build pkg-config curl python3 qtbase5-dev qtbase5-dev-tools libopus-dev libogg-dev libasound2-dev libasound2-plugins libpulse-dev patchelf squashfs-tools
+      - name: Build, test and package AppImage
+        run: chmod +x scripts/*.sh && ./scripts/build-linux.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TK-App-Linux-x86_64
+          path: releases/*.AppImage
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git make curl tar
+            mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-qt5-base mingw-w64-x86_64-opus
+            mingw-w64-x86_64-libogg mingw-w64-x86_64-python
+      - name: Build, test and package Windows
+        run: chmod +x scripts/*.sh && ./scripts/build-windows-msys2.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TK-App-Windows-x64
+          path: releases/*.zip

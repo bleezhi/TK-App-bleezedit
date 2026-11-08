@@ -1,0 +1,15 @@
+********* Start testing of SipTests *********
+Config: Using QtTest library 5.15.18, Qt 5.15.18 (x86_64-little_endian-llp64 shared (dynamic) release build; by GCC 16.1.0), windows 10
+PASS   : SipTests::initTestCase()
+PASS   : SipTests::onlyUdpTransportExists()
+PASS   : SipTests::echoAndSilentBackgroundDnd()
+PASS   : SipTests::incomingRejectedWhenDnd()
+PASS   : SipTests::dndOffIncomingAndDtmf()
+PASS   : SipTests::connectionTest14AndAutomaticRecording()
+QWARN  : SipTests::failedDndDoesNotChangeState() Us?uga DND 13: 486 Busy Here. Stan lokalny nie zosta? zmieniony.
+PASS   : SipTests::failedDndDoesNotChangeState()
+QWARN  : SipTests::invalidDialAndDisconnect() Numer mo?e zawiera? cyfry, *, # oraz + na pocz?tku.
+PASS   : SipTests::invalidDialAndDisconnect()
+PASS   : SipTests::cleanupTestCase()
+Totals: 9 passed, 0 failed, 0 skipped, 0 blacklisted, 7836ms
+********* Finished testing of SipTests *********
