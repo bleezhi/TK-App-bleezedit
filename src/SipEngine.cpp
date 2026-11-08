@@ -415,7 +415,13 @@ void SipEngine::handleMediaState(pjsua_call_id id, quint64 serial, bool service)
     }
 }
 void SipEngine::onConferenceOperation(const pjmedia_conf_op_info *info) {
-    if(info->status == PJ_SUCCESS) return;
+    if (!info) return;
+
+    if (info->status == PJ_SUCCESS ||
+        (info->op_type == PJMEDIA_CONF_OP_CONNECT_PORTS &&
+        info->status == PJ_EEXISTS)) {
+        return;
+        }
     SipEngine *engine = s_instance.load(); if(!engine) return;
     QString message = QStringLiteral("Operacja mostka audio: %1").arg(statusText(info->status));
     const quint64 epoch = engine->m_epoch.load();

@@ -119,7 +119,7 @@ void MainWindow::buildUi() {
     side->addSpacing(8);side->addWidget(separator("sideSeparator"));side->addSpacing(5);
     m_settingsButton=new QPushButton("Ustawienia");m_settingsButton->setObjectName("sidebarSettings");m_settingsButton->setIcon(glyph(Glyph::Settings,QColor("#000000")));m_settingsButton->setIconSize(QSize(19,19));side->addWidget(m_settingsButton);
     connect(m_settingsButton,&QPushButton::clicked,this,&MainWindow::showSettings);
-    side->addWidget(label("TK APP  2.0.0  /  DESKTOP","sideVersion"));shell->addWidget(sidebar);
+    side->addWidget(label("TK APP  0.0.2 (B)  /  DESKTOP","sideVersion"));shell->addWidget(sidebar);
 
     auto *mainArea=new QWidget;mainArea->setObjectName("mainArea");auto *main=new QVBoxLayout(mainArea);main->setContentsMargins(28,25,28,18);main->setSpacing(18);
     auto *header=new QHBoxLayout;auto *titles=new QVBoxLayout;titles->setSpacing(5);
