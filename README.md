@@ -19,8 +19,4 @@ on pull requests touching Android, and on version tags.
 
 ### Android status
 
-The Android app currently contains the Material 3 dialer interface, keypad,
-number editing, light/dark themes, and navigation placeholders for history,
-contacts, and settings. SIP registration, audio routing, incoming calls,
-call history persistence, and recording are not yet implemented on Android.
-The desktop SIP engine remains the functional reference implementation.
+The Android app contains a Material 3 dialer, locally saved SIP account settings (password remains memory-only), a persistent call-history store, and an Android audio-routing adapter. The history UI is ready for SIP call events. SIP registration, incoming/outgoing call media, Bluetooth routing integration, and recording still require the Android PJSIP/JNI port. The desktop SIP engine remains the functional reference implementation.
