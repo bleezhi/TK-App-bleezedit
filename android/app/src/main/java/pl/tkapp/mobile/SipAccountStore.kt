@@ -15,7 +15,7 @@ class SipAccountStore(context: Context) {
 
     fun load() = SipAccount(
         username = prefs.getString("username", "").orEmpty(),
-        password = prefs.getString("password", "").orEmpty(),
+        password = "", // SIP passwords are never persisted.
         displayName = prefs.getString("displayName", "").orEmpty(),
         domain = prefs.getString("domain", "15.235.62.162").orEmpty(),
         port = prefs.getInt("port", 5060)
