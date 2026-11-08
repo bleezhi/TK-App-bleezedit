@@ -24,7 +24,6 @@ class SipAccountStore(context: Context) {
     fun save(account: SipAccount) {
         prefs.edit()
             .putString("username", account.username.trim())
-            .putString("password", account.password)
             .putString("displayName", account.displayName.trim())
             .putString("domain", account.domain.trim())
             .putInt("port", account.port.coerceIn(1, 65535))
