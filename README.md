@@ -19,14 +19,14 @@ on pull requests touching Android, and on version tags.
 
 ### Android status
 
-The Android app contains a Material 3 dialer, locally saved SIP account settings (password remains memory-only), a persistent call-history store, and an Android audio-routing adapter. The history UI is ready for SIP call events. SIP registration, incoming/outgoing call media, Bluetooth routing integration, and recording still require the Android PJSIP/JNI port. The desktop SIP engine remains the functional reference implementation.
+The Android app contains a Material 3 dialer, locally saved SIP account settings (password remains memory-only), a persistent call-history store, and an Android audio-routing adapter. The history UI is ready for SIP call events. SIP registration, incoming/outgoing call media, Bluetooth routing integration, and recording still require a Kotlin PJSUA2 service and call lifecycle integration. The desktop SIP engine remains the functional reference implementation.
 
 ### PJSIP Android build
 
-The Android CI now builds the official PJSIP **2.15.1** source for `arm64-v8a`
+The Android CI is configured to build the official PJSIP **2.15.1** source for `arm64-v8a`
 using the Android NDK, then generates the official PJSUA2 SWIG Java/JNI
 bindings. The generated classes and native libraries are staged as a short-lived
-CI artifact and included in the debug APK build.
+CI artifact and included in the debug APK build when the workflow succeeds.
 
 To reproduce locally (Linux with Android NDK, SWIG, Git and build tools):
 
