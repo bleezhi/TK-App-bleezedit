@@ -34,7 +34,7 @@ To reproduce locally (Linux with Android NDK, SWIG, Git and build tools):
 ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/27.2.12479018" \
   PJSIP_VERSION=2.15.1 ./scripts/build-pjsip-android.sh
 cd android
-./gradlew :app:assembleDebug
+gradle :app:assembleDebug
 ```
 
 This is the native dependency and packaging milestone, not yet the SIP client
