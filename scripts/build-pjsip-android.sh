@@ -26,6 +26,9 @@ EOF
 
 export TARGET_ABI
 export ANDROID_NDK_ROOT
+# Keep native ELF segments compatible with Android 15 devices using 16 KB pages.
+export CFLAGS="${CFLAGS:-} -D__BIONIC_NO_PAGE_SIZE_MACRO"
+export LDFLAGS="${LDFLAGS:-} -Wl,-z,max-page-size=16384"
 export PATH="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
 
 ./configure-android --use-ndk-cflags
