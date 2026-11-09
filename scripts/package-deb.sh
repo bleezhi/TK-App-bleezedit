@@ -25,7 +25,7 @@ APPDIR="$WORK/TK-App.AppDir"
 PKGROOT="$WORK/package-root"
 rm -rf -- "$APPDIR" "$PKGROOT"
 python3 "$ROOT/scripts/bundle-linux.py" "$BINARY" "$APPDIR"
-install -d "$PKGROOT/opt/tk-app" "$PKGROOT/usr/bin" \
+install -d "$PKGROOT/DEBIAN" "$PKGROOT/opt/tk-app" "$PKGROOT/usr/bin" \
     "$PKGROOT/usr/share/applications" "$PKGROOT/usr/share/icons/hicolor/scalable/apps" \
     "$PKGROOT/usr/share/icons/hicolor/512x512/apps" "$PKGROOT/usr/share/doc/tk-app"
 cp -a "$APPDIR/usr/." "$PKGROOT/opt/tk-app/usr/"
