@@ -44,7 +44,8 @@ class MainActivity : ComponentActivity() {
         val historyStore = CallHistoryStore(this)
         val audioRoutes = AudioRouteController(this)
         setContent {
-            var dark by remember { mutableStateOf(isSystemInDarkTheme()) }
+            val systemDark = isSystemInDarkTheme()
+            var dark by remember { mutableStateOf(systemDark) }
             TkTheme(dark) {
                 DialerScreen(
                     dark = dark,
