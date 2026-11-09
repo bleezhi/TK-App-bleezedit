@@ -1,9 +1,12 @@
 package pl.tkapp.mobile
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
@@ -38,28 +41,70 @@ import java.util.Locale
 private val TkYellow = Color(0xFFFFD000)
 
 class MainActivity : ComponentActivity() {
+    private lateinit var sipEngine: AndroidSipEngine
+    private var sipUiState by mutableStateOf(SipUiState())
+    private var pendingAccount: SipAccount? = null
+
+    private val audioPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val account = pendingAccount
+        pendingAccount = null
+        if (granted && account != null) {
+            sipEngine.connect(account)
+        } else if (!granted) {
+            Toast.makeText(this, "Mikrofon jest wymagany do połączeń SIP.", Toast.LENGTH_LONG).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val accountStore = SipAccountStore(this)
         val historyStore = CallHistoryStore(this)
-        val audioRoutes = AudioRouteController(this)
+        sipEngine = AndroidSipEngine(AudioRouteController(this))
+        sipEngine.setListener { sipUiState = it }
+
         setContent {
             val systemDark = isSystemInDarkTheme()
             var dark by remember { mutableStateOf(systemDark) }
             TkTheme(dark) {
                 DialerScreen(
                     dark = dark,
+                    sipState = sipUiState,
                     initialAccount = accountStore.load(),
                     history = historyStore.load(),
                     onToggleTheme = { dark = !dark },
                     onSaveAccount = { accountStore.save(it) },
+                    onConnect = {
+                        accountStore.save(it)
+                        connectWithAudioPermission(it)
+                    },
+                    onDisconnect = { sipEngine.disconnect() },
                     onClearHistory = { historyStore.clear() },
-                    onSpeakerChanged = { audioRoutes.setSpeakerEnabled(it) },
-                    onCall = {
-                        Toast.makeText(this, "SIP engine is not yet connected on Android.", Toast.LENGTH_LONG).show()
-                    }
+                    onDial = { sipEngine.dial(it) },
+                    onAnswer = { sipEngine.answer() },
+                    onHangup = { sipEngine.hangup() },
+                    onMutedChanged = { sipEngine.setMuted(it) },
+                    onSpeakerChanged = { sipEngine.setSpeakerEnabled(it) }
                 )
             }
+        }
+    }
+
+    override fun onDestroy() {
+        if (::sipEngine.isInitialized) {
+            sipEngine.setListener(null)
+            sipEngine.release()
+        }
+        super.onDestroy()
+    }
+
+    private fun connectWithAudioPermission(account: SipAccount) {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            pendingAccount = account
+            audioPermissionRequest.launch(Manifest.permission.RECORD_AUDIO)
+        } else {
+            sipEngine.connect(account)
         }
     }
 }
@@ -81,13 +126,19 @@ private fun TkTheme(dark: Boolean, content: @Composable () -> Unit) {
 @Composable
 private fun DialerScreen(
     dark: Boolean,
+    sipState: SipUiState,
     initialAccount: SipAccount,
     history: List<CallRecord>,
     onToggleTheme: () -> Unit,
     onSaveAccount: (SipAccount) -> Unit,
+    onConnect: (SipAccount) -> Unit,
+    onDisconnect: () -> Unit,
     onClearHistory: () -> Unit,
-    onSpeakerChanged: (Boolean) -> Unit,
-    onCall: () -> Unit
+    onDial: (String) -> Unit,
+    onAnswer: () -> Unit,
+    onHangup: () -> Unit,
+    onMutedChanged: (Boolean) -> Unit,
+    onSpeakerChanged: (Boolean) -> Unit
 ) {
     var number by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
@@ -96,8 +147,10 @@ private fun DialerScreen(
     var displayName by remember { mutableStateOf(initialAccount.displayName) }
     var domain by remember { mutableStateOf(initialAccount.domain) }
     var port by remember { mutableStateOf(initialAccount.port.toString()) }
-    var speaker by remember { mutableStateOf(false) }
     val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "−", "0", "contacts")
+    LaunchedEffect(sipState.callPhase) {
+        if (sipState.callPhase != "idle") page = 0
+    }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
@@ -123,49 +176,93 @@ private fun DialerScreen(
             Spacer(Modifier.height(18.dp))
             when (page) {
                 0 -> {
-                    Text("Wybierz numer", style = MaterialTheme.typography.titleMedium)
-                    Spacer(Modifier.height(12.dp))
-                    Box(Modifier.fillMaxWidth().height(64.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-                        BasicTextField(
-                            value = number,
-                            onValueChange = { number = it.filter { c -> c.isDigit() || c in "*+#" }.take(80) },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                            textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 26.sp, textAlign = TextAlign.Center),
-                            decorationBox = { inner ->
-                                if (number.isEmpty()) Text("Numer telefonu", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 20.sp)
-                                inner()
-                            }
-                        )
+                    Text("SIP · ${sipState.registrationText}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (sipState.error != null) {
+                        Text(sipState.error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
-                    Spacer(Modifier.weight(1f))
-                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        keys.chunked(3).forEach { row ->
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                row.forEach { key ->
-                                    FilledTonalButton(
-                                        onClick = { when (key) {
-                                            "−" -> number = number.dropLast(1)
-                                            "contacts" -> page = 2
-                                            else -> number += key
-                                        } },
-                                        modifier = Modifier.size(82.dp), shape = CircleShape,
-                                        contentPadding = PaddingValues(0.dp),
-                                        colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurface)
-                                    ) {
-                                        if (key == "contacts") Icon(Icons.Default.Contacts, "Kontakty", Modifier.size(30.dp))
-                                        else if (key == "−") Icon(Icons.Default.Backspace, "Usuń cyfrę", Modifier.size(27.dp))
-                                        else Text(key, fontSize = 30.sp, fontWeight = FontWeight.Normal)
+                    Spacer(Modifier.height(12.dp))
+                    if (sipState.callPhase == "idle") {
+                        Text("Wybierz numer", style = MaterialTheme.typography.titleMedium)
+                        Spacer(Modifier.height(12.dp))
+                        Box(Modifier.fillMaxWidth().height(64.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp)).padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                            BasicTextField(
+                                value = number,
+                                onValueChange = { number = it.filter { c -> c.isDigit() || c in "*+#" }.take(80) },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 26.sp, textAlign = TextAlign.Center),
+                                decorationBox = { inner ->
+                                    if (number.isEmpty()) Text("Numer telefonu", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 20.sp)
+                                    inner()
+                                }
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            keys.chunked(3).forEach { row ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                    row.forEach { key ->
+                                        FilledTonalButton(
+                                            onClick = { when (key) {
+                                                "−" -> number = number.dropLast(1)
+                                                "contacts" -> page = 2
+                                                else -> number += key
+                                            } },
+                                            modifier = Modifier.size(82.dp), shape = CircleShape,
+                                            contentPadding = PaddingValues(0.dp),
+                                            colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant, contentColor = MaterialTheme.colorScheme.onSurface)
+                                        ) {
+                                            if (key == "contacts") Icon(Icons.Default.Contacts, "Kontakty", Modifier.size(30.dp))
+                                            else if (key == "−") Icon(Icons.Default.Backspace, "Usuń cyfrę", Modifier.size(27.dp))
+                                            else Text(key, fontSize = 30.sp, fontWeight = FontWeight.Normal)
+                                        }
                                     }
                                 }
                             }
                         }
+                        Spacer(Modifier.height(22.dp))
+                        FilledIconButton(onClick = { onDial(number) }, enabled = number.isNotBlank() && sipState.registered, modifier = Modifier.size(86.dp), shape = CircleShape,
+                            colors = IconButtonDefaults.filledIconButtonColors(containerColor = TkYellow, contentColor = Color.Black)
+                        ) { Icon(Icons.Default.Call, "Zadzwoń", Modifier.size(34.dp)) }
+                        Spacer(Modifier.height(12.dp))
+                    } else {
+                        Spacer(Modifier.weight(1f))
+                        ElevatedCard(Modifier.fillMaxWidth()) {
+                            Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text(
+                                    when (sipState.callPhase) {
+                                        "incoming" -> "Połączenie przychodzące"
+                                        "connecting" -> "Łączenie…"
+                                        "ringing" -> "Oczekiwanie na odebranie…"
+                                        "connected" -> "Rozmowa"
+                                        else -> sipState.callPhase
+                                    },
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(sipState.peer, style = MaterialTheme.typography.headlineSmall)
+                                if (sipState.incoming && !sipState.confirmed) {
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Button(onClick = onAnswer, modifier = Modifier.weight(1f)) { Text("Odbierz") }
+                                        OutlinedButton(onClick = onHangup, modifier = Modifier.weight(1f)) { Text("Odrzuć") }
+                                    }
+                                } else {
+                                    if (sipState.confirmed) {
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            OutlinedButton(onClick = { onMutedChanged(!sipState.muted) }, modifier = Modifier.weight(1f)) {
+                                                Text(if (sipState.muted) "Włącz mikrofon" else "Wycisz")
+                                            }
+                                            OutlinedButton(onClick = { onSpeakerChanged(!sipState.speaker) }, modifier = Modifier.weight(1f)) {
+                                                Text(if (sipState.speaker) "Głośnik: wł." else "Głośnik: wył.")
+                                            }
+                                        }
+                                    }
+                                    Button(onClick = onHangup, modifier = Modifier.fillMaxWidth()) { Text("Zakończ połączenie") }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.weight(1f))
                     }
-                    Spacer(Modifier.height(22.dp))
-                    FilledIconButton(onClick = onCall, enabled = number.isNotBlank(), modifier = Modifier.size(86.dp), shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = TkYellow, contentColor = Color.Black)
-                    ) { Icon(Icons.Default.Call, "Zadzwoń", Modifier.size(34.dp)) }
-                    Spacer(Modifier.height(12.dp))
                 }
                 1 -> {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -205,22 +302,41 @@ private fun DialerScreen(
                                 }
                                 onSaveAccount(SipAccount(username, password, displayName, domain, parsedPort))
                             }, modifier = Modifier.fillMaxWidth()) { Text("Zapisz konto") }
+                            Button(
+                                onClick = {
+                                    val parsedPort = port.toIntOrNull()
+                                    if (username.isBlank() || password.isEmpty() || domain.isBlank() || parsedPort == null || parsedPort !in 1..65535) {
+                                        return@Button
+                                    }
+                                    onConnect(SipAccount(username, password, displayName, domain, parsedPort))
+                                },
+                                enabled = !sipState.registered,
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Połącz z SIP") }
+                            OutlinedButton(
+                                onClick = onDisconnect,
+                                enabled = sipState.registrationText != "Rozłączono",
+                                modifier = Modifier.fillMaxWidth()
+                            ) { Text("Rozłącz konto") }
                         }
                         item {
                             HorizontalDivider()
                             Text("Audio", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                            Text("Sterowanie trasą audio jest gotowe do podłączenia z silnikiem rozmów.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Sterowanie audio jest dostępne podczas aktywnej rozmowy.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text("Głośnik")
-                                    Text("Przełącznik trasy głośnika Androida", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                                    Text("Trasa głośnika Androida", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                                 }
-                                Switch(checked = speaker, onCheckedChange = { speaker = it; onSpeakerChanged(it) })
+                                Switch(checked = sipState.speaker, enabled = sipState.confirmed, onCheckedChange = onSpeakerChanged)
                             }
                         }
                         item {
-                            Text("Stan SIP: niepołączony", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("Rejestracja, odbieranie i wykonywanie połączeń wymagają jeszcze portu PJSIP dla Androida.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Stan SIP: ${sipState.registrationText}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (sipState.error != null) {
+                                Text(sipState.error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                            }
+                            Text("Hasło SIP nie jest zapisywane. Wprowadź je ponownie po ponownym uruchomieniu aplikacji.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
