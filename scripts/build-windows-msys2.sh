@@ -11,10 +11,20 @@ fi
 export PKG_CONFIG_PATH="$(cygpath -m "${TK_PJ_PREFIX:-$DEPS/pj-install}/lib/pkgconfig");$(cygpath -m /mingw64/lib/pkgconfig)${PKG_CONFIG_PATH:+;$PKG_CONFIG_PATH}"
 cmake -S "$ROOT" -B "$ROOT/build" -G Ninja -DCMAKE_BUILD_TYPE=Release -DTK_BUILD_TESTS=ON -DQT_DIR=/mingw64/lib/cmake/Qt5
 cmake --build "$ROOT/build" -j"${TK_JOBS:-2}"
-"$ROOT/build/tk-unit-tests.exe"
-# Loopback SIP tests require Python; do not access the production server.
-"$ROOT/build/tk-sip-tests.exe"
-QT_QPA_PLATFORM=offscreen "$ROOT/build/tk-ui-tests.exe"
+
+# Pass an absolute Windows path: QProcess launches the local SIP peer as a
+# native Windows child process, so relying on the MSYS shell's python3 alias
+# can fail even when Python is installed in the MSYS2 environment.
+PYTHON_EXE="$(command -v python || command -v python3)"
+if [[ -z "$PYTHON_EXE" ]]; then echo "Python interpreter not found in MSYS2 PATH." >&2; exit 1; fi
+export TK_TEST_PYTHON="$(cygpath -w "$PYTHON_EXE")"
+echo "Running Windows unit tests..."
+"$ROOT/build/tk-unit-tests.exe" -v1
+echo "Running Windows local SIP loopback tests with $TK_TEST_PYTHON..."
+"$ROOT/build/tk-sip-tests.exe" -v1
+echo "Running Windows UI tests..."
+QT_QPA_PLATFORM=offscreen "$ROOT/build/tk-ui-tests.exe" -v1
+echo "All Windows tests passed."
 OUTPUT="${TK_OUTPUT_DIR:-$ROOT/releases}"
 STAGE="$OUTPUT/TK-App-Windows-x64"
 mkdir -p "$STAGE"
