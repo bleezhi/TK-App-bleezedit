@@ -21,7 +21,7 @@ export TK_TEST_PYTHON="$(cygpath -w "$PYTHON_EXE")"
 echo "Running Windows unit tests..."
 "$ROOT/build/tk-unit-tests.exe" -v1
 echo "Running Windows local SIP loopback tests with $TK_TEST_PYTHON..."
-"$ROOT/build/tk-sip-tests.exe" -v1
+"$ROOT/build/tk-sip-tests.exe" -v2 -o -,txt
 echo "Running Windows UI tests..."
 QT_QPA_PLATFORM=offscreen "$ROOT/build/tk-ui-tests.exe" -v1
 echo "All Windows tests passed."
