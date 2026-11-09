@@ -160,12 +160,14 @@ class AndroidSipEngine(
                 AuthCredInfo("Digest", "*", username, 0, password)
             )
 
+            // Match the desktop startup order: start the PJSUA endpoint before
+            // adding the account so registration callbacks run on a live stack.
+            ep.libStart()
+            configureCodecs(ep)
+
             val sipAccount = TkAccount(this)
             account = sipAccount
             sipAccount.create(accountConfig, true)
-
-            ep.libStart()
-            configureCodecs(ep)
 
             captureMedia = ep.audDevManager().getCaptureDevMedia()
             playbackMedia = ep.audDevManager().getPlaybackDevMedia()
@@ -326,7 +328,7 @@ class AndroidSipEngine(
 
     private fun configureCodecs(ep: Endpoint) {
         val codecs: CodecInfoVector2 = ep.codecEnum2()
-        for (index in 0 until codecs.size()) {
+        for (index in 0 until codecs.size) {
             val id = codecs.get(index).getCodecId()
             val normalized = id.lowercase()
             val priority = when {
@@ -340,7 +342,7 @@ class AndroidSipEngine(
         }
     }
 
-    private fun onRegistration(code: Int, reason: String, expiration: Int, callbackGeneration: Int) {
+    private fun onRegistration(code: Int, reason: String, expiration: Long, callbackGeneration: Int) {
         main.post {
             if (callbackGeneration != generation) return@post
             val registered = code == 200 && expiration > 0
@@ -398,7 +400,7 @@ class AndroidSipEngine(
 
     private fun onCallState(
         call: TkCall,
-        callState: pjsip_inv_state,
+        callState: Int,
         peer: String,
         callbackGeneration: Int
     ) {
@@ -565,7 +567,7 @@ class AndroidSipEngine(
             try {
                 val info = getInfo()
                 val media = info.getMedia()
-                for (index in 0 until media.size()) {
+                for (index in 0 until media.size) {
                     val item = media.get(index)
                     if (item.getType() == pjmedia_type.PJMEDIA_TYPE_AUDIO &&
                         item.getStatus() == pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE
