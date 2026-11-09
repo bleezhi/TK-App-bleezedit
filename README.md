@@ -12,8 +12,8 @@ Oryginalne repozytorium to https://github.com/pikus69420/TK-App
 
 | Platforma | Technologia | Sposób dystrybucji |
 |---|---|---|
-| Linux | Qt / CMake | AppImage |
-| Windows | Qt / CMake | Archiwum ZIP (wersja przenośna) |
+| Linux | Qt / CMake | AppImage, pakiet DEB |
+| Windows | Qt / CMake | Instalator EXE (Inno Setup), archiwum ZIP |
 | Android | Kotlin / Jetpack Compose / PJSUA2 | APK |
 
 Aplikacja desktopowa pozostaje główną, istniejącą implementacją. Klient Android jest rozwijany jako osobna aplikacja natywna w katalogu `android/`.
@@ -103,7 +103,7 @@ Aplikacja desktopowa korzysta z Qt i CMake. Szczegóły konfiguracji oraz zależ
 
 ## Automatyczne budowanie (GitHub Actions)
 
-GitHub Actions automatycznie buduje wersje Linux i Windows po zmianach w gałęzi `main`, dla pull requestów oraz tagów wersji. Workflow Androida uruchamia się po zmianach w kodzie Androida, dla pull requestów obejmujących ten kod oraz dla tagów wersji.
+GitHub Actions automatycznie buduje i testuje aplikację desktopową dla Linux i Windows. Dla Linux powstają pliki `.AppImage` i `.deb`; dla Windows — instalator `.exe` oraz przenośne archiwum `.zip`. Workflow Androida uruchamia się po zmianach w kodzie Androida, dla pull requestów obejmujących ten kod oraz dla tagów wersji.
 
 Gotowe pliki można znaleźć w sekcji **Actions → wybrane uruchomienie workflow → Artifacts**.
 
