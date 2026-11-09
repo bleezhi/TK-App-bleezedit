@@ -18,7 +18,7 @@ QFrame *separator(const char *name="separator") { auto *f=new QFrame;f->setObjec
 }
 
 MainWindow::MainWindow(bool headless,QWidget *parent) : QMainWindow(parent),m_settings(AppSettings::load()) {
-    setWindowTitle("TK App");setWindowIcon(appIcon());resize(1120,790);setMinimumSize(960,620);
+    setWindowTitle("TK App — Telekomunikacja Kaliska");setWindowIcon(appIcon());resize(1120,790);setMinimumSize(960,620);
     buildUi();
     if(!headless) {
         if(auto *screen=QGuiApplication::primaryScreen()) {

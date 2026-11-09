@@ -34,6 +34,7 @@ class AudioRouteController(context: Context) {
     private var selectedRoute = CallAudioRoute.DEFAULT
     private var previousMode = AudioManager.MODE_NORMAL
     private var previousSpeakerphone = false
+    private var previousBluetoothSco = false
     private var legacyScoRequested = false
     private var scoReceiverRegistered = false
 
@@ -85,6 +86,7 @@ class AudioRouteController(context: Context) {
             run {
                 previousMode = audio.mode
                 previousSpeakerphone = audio.isSpeakerphoneOn
+                previousBluetoothSco = audio.isBluetoothScoOn
                 audio.mode = AudioManager.MODE_IN_COMMUNICATION
             }
             callActive = true
@@ -122,7 +124,12 @@ class AudioRouteController(context: Context) {
         } else {
             @Suppress("DEPRECATION")
             run {
-                stopLegacyScoIfRequested()
+                if (previousBluetoothSco) {
+                    stopLegacyScoIfRequested()
+                    audio.startBluetoothSco()
+                } else {
+                    stopLegacyScoIfRequested()
+                }
                 audio.isSpeakerphoneOn = previousSpeakerphone
             }
         }
