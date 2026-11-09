@@ -21,9 +21,17 @@ export TK_TEST_PYTHON="$(cygpath -w "$PYTHON_EXE")"
 echo "Running Windows unit tests..."
 "$ROOT/build/tk-unit-tests.exe" -v1
 echo "Running Windows local SIP loopback tests with $TK_TEST_PYTHON..."
-# Pipe native Windows test output through the MSYS2 shell so QtTest diagnostics
-# are retained in GitHub Actions even when the executable exits abnormally.
-"$ROOT/build/tk-sip-tests.exe" -v2 -o -,txt 2>&1 | tee "$ROOT/build/tk-sip-tests.log"
+# Write QtTest diagnostics to a file, then print them from the MSYS2 shell.
+SIP_TEST_LOG="$ROOT/build/tk-sip-tests.log"
+set +e
+"$ROOT/build/tk-sip-tests.exe" -v2 -o "$SIP_TEST_LOG",txt
+SIP_TEST_STATUS=$?
+set -e
+if [[ -f "$SIP_TEST_LOG" ]]; then cat "$SIP_TEST_LOG"; fi
+if [[ "$SIP_TEST_STATUS" -ne 0 ]]; then
+    echo "Windows SIP loopback tests failed with exit code $SIP_TEST_STATUS." >&2
+    exit "$SIP_TEST_STATUS"
+fi
 echo "Running Windows UI tests..."
 QT_QPA_PLATFORM=offscreen "$ROOT/build/tk-ui-tests.exe" -v1
 echo "All Windows tests passed."
