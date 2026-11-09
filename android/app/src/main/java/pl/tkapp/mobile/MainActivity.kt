@@ -143,10 +143,10 @@ private fun DialerScreen(
     var number by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
     var username by remember { mutableStateOf(initialAccount.username) }
+    var authUsername by remember { mutableStateOf(initialAccount.authUsername) }
     var password by remember { mutableStateOf(initialAccount.password) }
     var displayName by remember { mutableStateOf(initialAccount.displayName) }
-    var domain by remember { mutableStateOf(initialAccount.domain) }
-    var port by remember { mutableStateOf(initialAccount.port.toString()) }
+    var identityDomain by remember { mutableStateOf(initialAccount.identityDomain) }
     val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "−", "0", "contacts")
     LaunchedEffect(sipState.callPhase) {
         if (sipState.callPhase != "idle") page = 0
@@ -290,25 +290,36 @@ private fun DialerScreen(
                             Text("Ustawienia są zapisywane lokalnie na tym urządzeniu.", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         item { OutlinedTextField(username, { username = it }, label = { Text("Login SIP") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                        item { OutlinedTextField(authUsername, { authUsername = it }, label = { Text("Login autoryzacji (opcjonalnie)") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
                         item { OutlinedTextField(password, { password = it }, label = { Text("Hasło SIP") }, modifier = Modifier.fillMaxWidth(), singleLine = true, visualTransformation = PasswordVisualTransformation()) }
                         item { OutlinedTextField(displayName, { displayName = it }, label = { Text("Nazwa wyświetlana") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                        item { OutlinedTextField(domain, { domain = it }, label = { Text("Domena / adres serwera") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
-                        item { OutlinedTextField(port, { port = it.filter(Char::isDigit).take(5) }, label = { Text("Port SIP") }, modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)) }
+                        item { OutlinedTextField(identityDomain, { identityDomain = it }, label = { Text("Domena konta (opcjonalnie)") }, modifier = Modifier.fillMaxWidth(), singleLine = true) }
+                        item { Text("Serwer rejestracji: ${TkSipProfile.server}:${TkSipProfile.port} · UDP", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall) }
                         item {
                             Button(onClick = {
-                                val parsedPort = port.toIntOrNull()
-                                if (username.isBlank() || domain.isBlank() || parsedPort == null || parsedPort !in 1..65535) {
-                                    return@Button
-                                }
-                                onSaveAccount(SipAccount(username, password, displayName, domain, parsedPort))
+                                if (username.isBlank()) return@Button
+                                onSaveAccount(
+                                    SipAccount(
+                                        username = username,
+                                        authUsername = authUsername,
+                                        password = password,
+                                        displayName = displayName,
+                                        identityDomain = identityDomain
+                                    )
+                                )
                             }, modifier = Modifier.fillMaxWidth()) { Text("Zapisz konto") }
                             Button(
                                 onClick = {
-                                    val parsedPort = port.toIntOrNull()
-                                    if (username.isBlank() || password.isEmpty() || domain.isBlank() || parsedPort == null || parsedPort !in 1..65535) {
-                                        return@Button
-                                    }
-                                    onConnect(SipAccount(username, password, displayName, domain, parsedPort))
+                                    if (username.isBlank() || password.isEmpty()) return@Button
+                                    onConnect(
+                                        SipAccount(
+                                            username = username,
+                                            authUsername = authUsername,
+                                            password = password,
+                                            displayName = displayName,
+                                            identityDomain = identityDomain
+                                        )
+                                    )
                                 },
                                 enabled = !sipState.registered,
                                 modifier = Modifier.fillMaxWidth()
