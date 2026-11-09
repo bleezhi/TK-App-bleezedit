@@ -43,7 +43,10 @@ cd pjsip-apps/src/swig
 # Build only the Java/PJSUA2 bindings. The default Android SWIG target also
 # builds the Xamarin/C# wrapper, which copies optional camera helper sources
 # that are absent in this audio-only build and causes CI to fail.
-make java -j"$(nproc)"
+# The upstream Java Makefile generates SWIG sources as a prerequisite of the
+# JNI shared library, then compiles the generated Java classes. Running this
+# target in parallel races javac against SWIG and can report missing Error.java.
+make java
 
 GENERATED="java/android/pjsua2/src/main"
 test -d "$GENERATED/jniLibs/$TARGET_ABI"
