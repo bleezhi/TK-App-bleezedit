@@ -1,5 +1,7 @@
 #include "MainWindow.h"
 #include <QApplication>
+#include <QAbstractButton>
+#include <QPushButton>
 #include <QCommandLineParser>
 #include <QFile>
 #include <QFont>
