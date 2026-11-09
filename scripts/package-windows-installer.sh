@@ -14,7 +14,7 @@ elif [[ -x "/c/Program Files/Inno Setup 6/ISCC.exe" ]]; then
 else
     echo "Nie znaleziono Inno Setup Compiler (ISCC)." >&2
     exit 1
-}
+fi
 [[ -d "$STAGE" ]] || { echo "Nie znaleziono katalogu aplikacji: $STAGE" >&2; exit 1; }
 VERSION="$(python3 - "$ROOT/CMakeLists.txt" <<'PY'
 import pathlib,re,sys
