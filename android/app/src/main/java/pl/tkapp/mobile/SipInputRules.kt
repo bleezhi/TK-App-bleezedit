@@ -5,7 +5,7 @@ object SipInputRules {
     private val usernamePattern = Regex("^[A-Za-z0-9_.!~*'()+%\\-]{1,128}$")
     private val identityDomainPattern = Regex("^[A-Za-z0-9.\\-]+$")
     private val dialNumberPattern = Regex("^\\+?[0-9*#]{1,64}$")
-    private val separators = Regex("""[\\s()\\-]""")
+    private val separators = Regex("""[\s()\-]""")
 
     fun isValidUsername(value: String): Boolean = usernamePattern.matches(value)
 
