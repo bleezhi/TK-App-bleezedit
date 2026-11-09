@@ -141,6 +141,10 @@ while True:
             continue
         data, addr = sip.recvfrom(65535)
         first, h, body = parse(data)
+        # Windows/PJSIP may emit an empty UDP datagram during endpoint teardown;
+        # it is not a SIP request and must not terminate the test peer.
+        if not first.strip():
+            continue
         if first.startswith('SIP/2.0'):
             status = int(first.split()[1]); cid=h.get('call-id','')
             if cid in dialogs and dialogs[cid].get('incoming'):
