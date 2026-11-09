@@ -204,7 +204,6 @@ class AndroidSipEngine(
             return
         }
         destroyEndpoint()
-        audioRoutes.close()
         update {
             it.copy(
                 registered = false,
@@ -330,6 +329,7 @@ class AndroidSipEngine(
             return
         }
         destroyEndpoint()
+        audioRoutes.close()
         update {
             it.copy(
                 registered = false,
