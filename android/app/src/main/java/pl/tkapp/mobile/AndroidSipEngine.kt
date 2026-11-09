@@ -41,6 +41,8 @@ data class SipUiState(
     val confirmed: Boolean = false,
     val muted: Boolean = false,
     val speaker: Boolean = false,
+    val audioRoute: CallAudioRoute = CallAudioRoute.DEFAULT,
+    val availableAudioRoutes: Set<CallAudioRoute> = setOf(CallAudioRoute.DEFAULT, CallAudioRoute.SPEAKER),
     val error: String? = null
 )
 
@@ -62,6 +64,21 @@ class AndroidSipEngine(
     private var generation = 0
     private var currentServer = TkSipProfile.server
     private var currentPort = TkSipProfile.port
+
+    init {
+        audioRoutes.setListener { snapshot ->
+            val applySnapshot = {
+                update {
+                    it.copy(
+                        audioRoute = snapshot.route,
+                        availableAudioRoutes = snapshot.availableRoutes,
+                        speaker = snapshot.route == CallAudioRoute.SPEAKER
+                    )
+                }
+            }
+            if (onMainThread()) applySnapshot() else main.post { applySnapshot() }
+        }
+    }
 
     fun setListener(value: ((SipUiState) -> Unit)?) {
         listener = value
@@ -187,6 +204,7 @@ class AndroidSipEngine(
             return
         }
         destroyEndpoint()
+        audioRoutes.close()
         update {
             it.copy(
                 registered = false,
@@ -289,9 +307,18 @@ class AndroidSipEngine(
     }
 
     fun setSpeakerEnabled(enabled: Boolean) {
+        setAudioRoute(if (enabled) CallAudioRoute.SPEAKER else CallAudioRoute.DEFAULT)
+    }
+
+    fun setAudioRoute(route: CallAudioRoute) {
+        if (!onMainThread()) {
+            main.post { setAudioRoute(route) }
+            return
+        }
+        if (!confirmed) return
         try {
-            audioRoutes.setSpeakerEnabled(enabled)
-            update { it.copy(speaker = enabled, error = null) }
+            audioRoutes.selectRoute(route)
+            update { it.copy(error = null) }
         } catch (error: Exception) {
             update { it.copy(error = error.message ?: "Nie udało się zmienić trasy audio.") }
         }

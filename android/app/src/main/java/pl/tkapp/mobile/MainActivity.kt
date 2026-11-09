@@ -85,7 +85,8 @@ class MainActivity : ComponentActivity() {
                     onAnswer = { sipEngine.answer() },
                     onHangup = { sipEngine.hangup() },
                     onMutedChanged = { sipEngine.setMuted(it) },
-                    onSpeakerChanged = { sipEngine.setSpeakerEnabled(it) }
+                    onSpeakerChanged = { sipEngine.setSpeakerEnabled(it) },
+                    onAudioRouteChanged = { sipEngine.setAudioRoute(it) }
                 )
             }
         }
@@ -138,10 +139,12 @@ private fun DialerScreen(
     onAnswer: () -> Unit,
     onHangup: () -> Unit,
     onMutedChanged: (Boolean) -> Unit,
-    onSpeakerChanged: (Boolean) -> Unit
+    onSpeakerChanged: (Boolean) -> Unit,
+    onAudioRouteChanged: (CallAudioRoute) -> Unit
 ) {
     var number by remember { mutableStateOf("") }
     var page by remember { mutableIntStateOf(0) }
+    var audioRouteMenuExpanded by remember { mutableStateOf(false) }
     var username by remember { mutableStateOf(initialAccount.username) }
     var authUsername by remember { mutableStateOf(initialAccount.authUsername) }
     var password by remember { mutableStateOf(initialAccount.password) }
@@ -252,8 +255,27 @@ private fun DialerScreen(
                                             OutlinedButton(onClick = { onMutedChanged(!sipState.muted) }, modifier = Modifier.weight(1f)) {
                                                 Text(if (sipState.muted) "Włącz mikrofon" else "Wycisz")
                                             }
-                                            OutlinedButton(onClick = { onSpeakerChanged(!sipState.speaker) }, modifier = Modifier.weight(1f)) {
-                                                Text(if (sipState.speaker) "Głośnik: wł." else "Głośnik: wył.")
+                                            Box(Modifier.weight(1f)) {
+                                                OutlinedButton(
+                                                    onClick = { audioRouteMenuExpanded = true },
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Text(sipState.audioRoute.label)
+                                                }
+                                                DropdownMenu(
+                                                    expanded = audioRouteMenuExpanded,
+                                                    onDismissRequest = { audioRouteMenuExpanded = false }
+                                                ) {
+                                                    sipState.availableAudioRoutes.sortedBy { it.ordinal }.forEach { route ->
+                                                        DropdownMenuItem(
+                                                            text = { Text(route.label) },
+                                                            onClick = {
+                                                                audioRouteMenuExpanded = false
+                                                                onAudioRouteChanged(route)
+                                                            }
+                                                        )
+                                                    }
+                                                }
                                             }
                                         }
                                     }
