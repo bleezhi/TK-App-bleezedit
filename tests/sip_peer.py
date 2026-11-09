@@ -8,8 +8,10 @@ import hashlib, json, math, os, re, selectors, socket, struct, sys, threading, t
 sip = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sip.bind(('127.0.0.1', 0))
 sip.setblocking(False)
+# Bind RTP to all local interfaces. PJSIP may advertise the Windows NIC address
+# rather than loopback in SDP; a loopback-only source socket breaks media routing.
 rtp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-rtp.bind(('127.0.0.1', 0))
+rtp.bind(('0.0.0.0', 0))
 rtp.setblocking(False)
 sip_port = sip.getsockname()[1]
 rtp_port = rtp.getsockname()[1]
