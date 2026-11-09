@@ -41,6 +41,7 @@ private slots:
         // Only the Linux->MinGW cross-build uses a POSIX source path (Wine Z:).
         if(peerPath.startsWith('/')) peerPath="Z:"+peerPath;
 #endif
+        m_peer.setProcessChannelMode(QProcess::ForwardedErrorChannel);
         m_peer.start(qEnvironmentVariable("TK_TEST_PYTHON","python3"),{peerPath});
         QVERIFY(m_peer.waitForStarted(3000)); QVERIFY2(m_peer.waitForReadyRead(5000),qPrintable(QString::fromUtf8(m_peer.readAllStandardError()))); readPeer(); QVERIFY(!m_peerEvents.isEmpty());
         int port=m_peerEvents.first().value("sip_port").toInt(); QVERIFY(port>0);
