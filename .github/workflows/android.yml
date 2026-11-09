@@ -70,7 +70,7 @@ jobs:
           name: tk-pjsip-android-arm64
           path: android/app/build/pjsip/
       - name: Build Android APK with PJSIP native libraries
-        run: gradle -p android :app:assembleDebug
+        run: gradle -p android :app:testDebugUnitTest :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
           name: TK-App-Android-debug

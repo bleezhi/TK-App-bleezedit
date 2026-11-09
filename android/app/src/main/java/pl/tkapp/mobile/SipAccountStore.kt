@@ -6,6 +6,24 @@ object TkSipProfile {
     const val server = "15.235.62.162"
     const val port = 5060
     const val transport = "udp"
+
+    fun registrarUri(): String = "sip:$server:$port;transport=$transport"
+
+    fun authUsername(account: SipAccount): String =
+        account.authUsername.trim().ifEmpty { account.username.trim() }
+
+    fun identityUri(account: SipAccount): String {
+        val username = account.username.trim()
+        val domain = account.identityDomain.trim().ifBlank { server }
+        val displayName = account.displayName.trim()
+            .replace("\\", "\\\\")
+            .replace("\"", "\\\"")
+        return if (displayName.isEmpty()) {
+            "sip:$username@$domain"
+        } else {
+            "\"$displayName\" <sip:$username@$domain>"
+        }
+    }
 }
 
 data class SipAccount(

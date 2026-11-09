@@ -83,11 +83,9 @@ class AndroidSipEngine(
 
         val username = config.username.trim()
         val password = config.password
-        val server = TkSipProfile.server
-        val port = TkSipProfile.port
         val identityDomain = config.identityDomain.trim()
-        val authUsername = config.authUsername.trim().ifEmpty { username }
-        if (!username.matches(Regex("^[A-Za-z0-9_.!~*'()+%\\-]{1,128}$"))) {
+        val authUsername = TkSipProfile.authUsername(config)
+        if (!SipInputRules.isValidUsername(username)) {
             update { it.copy(error = "Wpisz poprawny login SIP.") }
             return
         }
@@ -95,16 +93,14 @@ class AndroidSipEngine(
             update { it.copy(error = "Wpisz hasło SIP. Hasło nie jest zapisywane na urządzeniu.") }
             return
         }
-        if (identityDomain.isNotEmpty() &&
-            !identityDomain.matches(Regex("^[A-Za-z0-9.\\-]+$"))
-        ) {
+        if (identityDomain.isNotEmpty() && !SipInputRules.isValidIdentityDomain(identityDomain)) {
             update { it.copy(error = "Nieprawidłowy serwer lub port SIP.") }
             return
         }
 
         generation++
-        currentServer = server
-        currentPort = port
+        currentServer = TkSipProfile.server
+        currentPort = TkSipProfile.port
         update {
             it.copy(
                 registered = false,
@@ -145,16 +141,9 @@ class AndroidSipEngine(
             transport.setPort(0)
             ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_UDP, transport)
 
-            val identityHost = identityDomain.ifBlank { server }
-            val identity = if (config.displayName.isBlank()) {
-                "sip:$username@$identityHost"
-            } else {
-                val display = config.displayName.replace("\\", "\\\\").replace("\"", "\\\"")
-                "\"$display\" <sip:$username@$identityHost>"
-            }
             val accountConfig = AccountConfig()
-            accountConfig.setIdUri(identity)
-            accountConfig.getRegConfig().setRegistrarUri("sip:$server:$port;transport=udp")
+            accountConfig.setIdUri(TkSipProfile.identityUri(config))
+            accountConfig.getRegConfig().setRegistrarUri(TkSipProfile.registrarUri())
             accountConfig.getRegConfig().setTimeoutSec(300)
             accountConfig.getRegConfig().setRetryIntervalSec(30)
             accountConfig.getRegConfig().setFirstRetryIntervalSec(5)
@@ -228,8 +217,8 @@ class AndroidSipEngine(
             update { it.copy(error = "Trwa już rozmowa.") }
             return
         }
-        val number = rawNumber.trim().replace(Regex("[\\s()\\-]"), "")
-        if (!number.matches(Regex("^\\+?[0-9*#]{1,64}$"))) {
+        val number = SipInputRules.normalizeDialNumber(rawNumber)
+        if (!SipInputRules.isValidDialNumber(number)) {
             update { it.copy(error = "Nieprawidłowy numer telefonu.") }
             return
         }
