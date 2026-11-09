@@ -1,27 +1,135 @@
-#!/usr/bin/env bash
-set -Eeuo pipefail
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-STAGE="${1:-$ROOT/releases/TK-App-Windows-x64}"
-OUTPUT="${2:-$ROOT/releases}"
-command -v iscc >/dev/null || command -v ISCC.exe >/dev/null || {
-    echo "Nie znaleziono Inno Setup Compiler (ISCC)." >&2
-    exit 1
-}
-[[ -d "$STAGE" ]] || { echo "Nie znaleziono katalogu aplikacji: $STAGE" >&2; exit 1; }
-VERSION="$(python3 - "$ROOT/CMakeLists.txt" <<'PY'
-import pathlib,re,sys
-m=re.search(r'project\s*\(\s*TKApp\s+VERSION\s+([0-9]+(?:\.[0-9]+){0,3})\b',pathlib.Path(sys.argv[1]).read_text(),re.I)
-if not m: sys.exit('Cannot read version from CMakeLists.txt.')
-print(m.group(1))
-PY
-)"
-mkdir -p "$OUTPUT"
-STAGE_WIN="$(cygpath -w "$(cd "$STAGE" && pwd)")"
-ROOT_WIN="$(cygpath -w "$ROOT")"
-OUTPUT_WIN="$(cygpath -w "$(cd "$OUTPUT" && pwd)")"
-COMPILER="$(command -v iscc || command -v ISCC.exe)"
-"$COMPILER" "/DAppVersion=$VERSION" "/DStageDir=$STAGE_WIN" \
-    "/O$OUTPUT_WIN" "$ROOT_WIN/packaging/windows/TK-App.iss"
-INSTALLER="$OUTPUT/TK-App-$VERSION-Windows-x64-Setup.exe"
-[[ -s "$INSTALLER" ]] || { echo "Inno Setup nie utworzył instalatora: $INSTALLER" >&2; exit 1; }
-echo "Gotowy instalator: $INSTALLER"
+# TK App
+
+Aplikacja telefoniczna dla **Telekomunikacji Kaliskiej**. Projekt obejmuje aplikację desktopową opartą na Qt oraz natywnego klienta na Androida.
+
+**Wersja:** beta
+
+# UWAGA.
+*To nie jest oryginalny TK App. Jest to fork TK App przez @tehbleezspartan (discord), jednej osoby ze staffu TK.*
+Oryginalne repozytorium to https://github.com/pikus69420/TK-App
+
+## Wersje aplikacji
+
+| Platforma | Technologia | Sposób dystrybucji |
+|---|---|---|
+| Linux | Qt / CMake | AppImage, pakiet DEB |
+| Windows | Qt / CMake | Instalator EXE (Inno Setup), archiwum ZIP |
+| Android | Kotlin / Jetpack Compose / PJSUA2 | APK |
+
+Aplikacja desktopowa pozostaje główną, istniejącą implementacją. Klient Android jest rozwijany jako osobna aplikacja natywna w katalogu `android/`.
+
+## Instalacja
+
+### Windows
+
+Pobierz plik `TK-App-*-Windows-x64-Setup.exe` z artefaktów GitHub Actions lub z wydania projektu i uruchom instalator. Kreator pozwala wybrać katalog instalacji; może utworzyć skrót w menu Start oraz opcjonalnie na pulpicie. Deinstalator jest dostępny w ustawieniach systemu Windows.
+
+### Linux
+
+**Debian / Ubuntu i dystrybucje zgodne z DEB:**
+
+```sh
+sudo apt install ./TK-App-*-amd64.deb
+```
+
+**Pozostałe dystrybucje x86_64:**
+
+```sh
+chmod +x TK-App-*-x86_64.AppImage
+./TK-App-*-x86_64.AppImage
+```
+
+AppImage nie wymaga instalacji w systemie. Wymaga działającego środowiska graficznego X11/XWayland i zgodnej wersji glibc.
+
+## Funkcje
+
+### Aplikacja desktopowa
+
+- Obsługa konta i połączeń SIP przez PJSUA.
+- Połączenia przychodzące i wychodzące.
+- Konfiguracja urządzeń audio.
+- Nagrywanie rozmów do WAV lub OPUS.
+- Tryb „Nie przeszkadzać” (DND).
+- Ustawienia konta, audio i nagrywania.
+
+### Android
+
+- Natywny interfejs w Kotlinie i Jetpack Compose.
+- Oficjalne powiązania Java/JNI biblioteki PJSUA2.
+- Rejestracja konta SIP oraz obsługa połączeń wychodzących i przychodzących.
+- Odbieranie i odrzucanie połączeń oraz aktualizacja stanu rozmowy.
+- Wyciszanie mikrofonu przez PJSIP.
+- Wybór trasy audio: automatyczna, głośnik lub podłączony zestaw Bluetooth.
+- Android 12 i nowszy korzysta z `AudioManager.setCommunicationDevice()`; Android 8–11 używa starszego mechanizmu Bluetooth SCO, jeśli zestaw go obsługuje.
+- Aplikacja prosi o uprawnienie `RECORD_AUDIO` przed uruchomieniem stosu SIP.
+
+**Ważne:** kod Androida i biblioteka PJSIP są budowane w CI, a APK jest składany w ramach workflow. Nie oznacza to jeszcze potwierdzenia działania z prawdziwym kontem TK — rejestracja na serwerze i rzeczywista rozmowa nie zostały dotąd zweryfikowane w teście integracyjnym na urządzeniu.
+
+## Konfiguracja SIP Telekomunikacji Kaliskiej
+
+Klient korzysta z profilu sieciowego istniejącej aplikacji desktopowej:
+
+| Parametr | Wartość |
+|---|---|
+| Serwer rejestracji SIP | `15.235.62.162` |
+| Port | `5060` |
+| Transport | UDP |
+| Uwierzytelnianie | SIP Digest |
+| Częstotliwość próbkowania audio | 16 kHz, mono |
+| Długość ramki audio | 20 ms |
+
+Login autoryzacyjny może być inny niż login konta. Domena tożsamości jest opcjonalna; domyślnie używany jest adres serwera. Hasło SIP nie jest zapisywane w ustawieniach aplikacji — pozostaje w pamięci procesu.
+
+Preferencje kodeków klienta desktopowego obejmują Opus, PCMU, PCMA i G.722. Klient Android korzysta z profilu kodeków skonfigurowanego w swoim silniku PJSIP; dostępność konkretnego kodeka zależy od dołączonej implementacji.
+
+**Bezpieczeństwo połączenia:** profil TK używa UDP, a SIP/RTP nie są szyfrowane. Korzystaj z zaufanej sieci lub VPN. Nie umieszczaj haseł ani danych logowania w zgłoszeniach, logach czy repozytorium.
+
+## Budowanie klienta Android
+
+CI kompiluje oficjalne źródła PJSIP w wersji **2.15.1** dla architektury `arm64-v8a`, a następnie generuje oficjalne powiązania Java/JNI PJSUA2. Wygenerowane klasy i biblioteki natywne są przekazywane jako artefakt CI i dołączane podczas budowania APK.
+
+### Wymagania
+
+- Linux
+- Android SDK
+- Android NDK w wersji `27.2.12479018`
+- SWIG
+- Git i standardowe narzędzia kompilacyjne
+- Gradle
+
+### Budowanie PJSIP i APK
+
+W katalogu głównym repozytorium:
+
+```sh
+ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/27.2.12479018" \
+  PJSIP_VERSION=2.15.1 ./scripts/build-pjsip-android.sh
+
+cd android
+gradle :app:assembleDebug
+```
+
+Obecnie kompilowana jest architektura `arm64-v8a`. Obsługa emulatorów `x86_64` i dodatkowych architektur Androida pozostaje do zrobienia.
+
+## Stan rozwoju i ograniczenia Androida
+
+- **Rejestracja i rozmowy:** istnieje implementacja cyklu życia SIP, ale nie została jeszcze potwierdzona rzeczywistym połączeniem z kontem TK.
+- **Praca w tle:** silnik PJSUA2 jest obecnie powiązany z cyklem życia aktywności. Do niezawodnej obsługi rozmów po przejściu aplikacji w tło potrzebna jest usługa pierwszoplanowa (Foreground Service).
+- **Bluetooth:** obsługa tras audio jest zaimplementowana na poziomie platformy, ale wymaga testów na fizycznych urządzeniach — zarówno z zestawami klasycznymi, jak i BLE.
+- **Historia połączeń:** automatyczny zapis zdarzeń historii połączeń nie jest jeszcze zaimplementowany.
+- **Nagrywanie na Androidzie:** nie jest jeszcze zaimplementowane.
+- **G.726:** nie jest obecnie włączony w zestawie kodeków Androida; wymaga znalezienia i zweryfikowania zgodnej implementacji.
+
+## Budowanie aplikacji desktopowej
+
+Aplikacja desktopowa korzysta z Qt i CMake. Szczegóły konfiguracji oraz zależności znajdują się w pliku `CMakeLists.txt` i katalogu `packaging/`. Nie trzeba budować klienta Androida, aby rozwijać lub uruchamiać aplikację desktopową.
+
+## Automatyczne budowanie (GitHub Actions)
+
+GitHub Actions automatycznie buduje i testuje aplikację desktopową dla Linux i Windows. Dla Linux powstają pliki `.AppImage` i `.deb`; dla Windows — instalator `.exe` oraz przenośne archiwum `.zip`. Workflow Androida uruchamia się po zmianach w kodzie Androida, dla pull requestów obejmujących ten kod oraz dla tagów wersji.
+
+Gotowe pliki można znaleźć w sekcji **Actions → wybrane uruchomienie workflow → Artifacts**.
+
+## Licencja
+
+Informacje o licencji znajdują się w pliku [LICENSE](LICENSE).
