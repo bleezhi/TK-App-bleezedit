@@ -3,7 +3,15 @@ set -Eeuo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 STAGE="${1:-$ROOT/releases/TK-App-Windows-x64}"
 OUTPUT="${2:-$ROOT/releases}"
-command -v iscc >/dev/null || command -v ISCC.exe >/dev/null || {
+if command -v iscc >/dev/null 2>&1; then
+    COMPILER="$(command -v iscc)"
+elif command -v ISCC.exe >/dev/null 2>&1; then
+    COMPILER="$(command -v ISCC.exe)"
+elif [[ -x "/c/Program Files (x86)/Inno Setup 6/ISCC.exe" ]]; then
+    COMPILER="/c/Program Files (x86)/Inno Setup 6/ISCC.exe"
+elif [[ -x "/c/Program Files/Inno Setup 6/ISCC.exe" ]]; then
+    COMPILER="/c/Program Files/Inno Setup 6/ISCC.exe"
+else
     echo "Nie znaleziono Inno Setup Compiler (ISCC)." >&2
     exit 1
 }
@@ -19,7 +27,6 @@ mkdir -p "$OUTPUT"
 STAGE_WIN="$(cygpath -w "$(cd "$STAGE" && pwd)")"
 ROOT_WIN="$(cygpath -w "$ROOT")"
 OUTPUT_WIN="$(cygpath -w "$(cd "$OUTPUT" && pwd)")"
-COMPILER="$(command -v iscc || command -v ISCC.exe)"
 "$COMPILER" "/DAppVersion=$VERSION" "/DStageDir=$STAGE_WIN" \
     "/O$OUTPUT_WIN" "$ROOT_WIN/packaging/windows/TK-App.iss"
 INSTALLER="$OUTPUT/TK-App-$VERSION-Windows-x64-Setup.exe"
