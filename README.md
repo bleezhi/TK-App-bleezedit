@@ -20,9 +20,12 @@ on pull requests touching Android, and on version tags.
 The Android app now includes the official PJSUA2 Java/JNI bindings and a Kotlin
 `AndroidSipEngine`. The dialer UI is connected to SIP registration, outgoing
 calls, incoming-call answer/reject, call-state updates, and bidirectional audio
-media. During an active call, the UI exposes microphone mute and Android
-speakerphone controls. The app requests the Android `RECORD_AUDIO` runtime
-permission before starting the SIP stack.
+media. During an active call, the UI exposes PJSIP microphone mute and an audio-route
+selector. Android 12+ uses `AudioManager.setCommunicationDevice()` for the
+speaker and connected Bluetooth headsets (including BLE); Android 8–11 use
+the legacy Bluetooth SCO route where a compatible headset is available.
+Android device changes update the available route choices. The app requests
+the Android `RECORD_AUDIO` runtime permission before starting the SIP stack.
 
 The Android profile follows the desktop TK profile: UDP to
 `15.235.62.162:5060`, Digest authentication, an optional separate
@@ -34,8 +37,10 @@ memory-only and are never written to preferences.
 the Android APK, but no live registration or real-device call test has yet
 verified the TK account/server path. The endpoint currently lives for the
 activity lifetime; a foreground call service is still needed for reliable
-background calls and lifecycle survival. Bluetooth route selection, automatic
-call-history event persistence, and recording are also not implemented yet.
+background calls and lifecycle survival. Bluetooth routing has buildable platform-specific implementation, but still
+needs physical-device verification with both a classic headset and a BLE
+headset. Automatic call-history event persistence and recording are not
+implemented yet.
 
 ### PJSIP Android build
 

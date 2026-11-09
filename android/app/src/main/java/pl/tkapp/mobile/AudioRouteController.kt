@@ -1,6 +1,9 @@
 package pl.tkapp.mobile
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -17,10 +20,11 @@ data class AudioRouteSnapshot(
  * Owns Android's communication-device routing for SIP calls.
  *
  * Android 12+ uses the communication-device API (including BLE headsets).
- * Older releases use the legacy speakerphone / Bluetooth SCO controls.
- * The normal route is left to Android so wired headsets continue to work.
+ * Android 8–11 use speakerphone controls and the legacy Bluetooth SCO
+ * handshake. The normal route is left to Android so wired headsets work.
  */
 class AudioRouteController(context: Context) {
+    private val appContext = context.applicationContext
     private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -30,15 +34,43 @@ class AudioRouteController(context: Context) {
     private var selectedRoute = CallAudioRoute.DEFAULT
     private var previousMode = AudioManager.MODE_NORMAL
     private var previousSpeakerphone = false
-    private var previousBluetoothSco = false
+    private var legacyScoRequested = false
+    private var scoReceiverRegistered = false
 
     private val deviceCallback = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) = refreshRoutes()
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) = refreshRoutes()
     }
 
+    private val scoReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent.action != AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED || !callActive) return
+            when (intent.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1)) {
+                AudioManager.SCO_AUDIO_STATE_CONNECTING,
+                AudioManager.SCO_AUDIO_STATE_CONNECTED -> {
+                    selectedRoute = CallAudioRoute.BLUETOOTH
+                    publish()
+                }
+                AudioManager.SCO_AUDIO_STATE_DISCONNECTED -> {
+                    if (selectedRoute == CallAudioRoute.BLUETOOTH) {
+                        legacyScoRequested = false
+                        selectedRoute = CallAudioRoute.DEFAULT
+                        publish()
+                    }
+                }
+            }
+        }
+    }
+
     init {
         audio.registerAudioDeviceCallback(deviceCallback, mainHandler)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            appContext.registerReceiver(
+                scoReceiver,
+                IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED)
+            )
+            scoReceiverRegistered = true
+        }
     }
 
     fun setListener(value: ((AudioRouteSnapshot) -> Unit)?) {
@@ -53,7 +85,6 @@ class AudioRouteController(context: Context) {
             run {
                 previousMode = audio.mode
                 previousSpeakerphone = audio.isSpeakerphoneOn
-                previousBluetoothSco = audio.isBluetoothScoOn
                 audio.mode = AudioManager.MODE_IN_COMMUNICATION
             }
             callActive = true
@@ -91,13 +122,7 @@ class AudioRouteController(context: Context) {
         } else {
             @Suppress("DEPRECATION")
             run {
-                if (previousBluetoothSco) {
-                    audio.startBluetoothSco()
-                    audio.isBluetoothScoOn = true
-                } else {
-                    audio.isBluetoothScoOn = false
-                    audio.stopBluetoothSco()
-                }
+                stopLegacyScoIfRequested()
                 audio.isSpeakerphoneOn = previousSpeakerphone
             }
         }
@@ -113,6 +138,10 @@ class AudioRouteController(context: Context) {
         if (closed) return
         endCall()
         audio.unregisterAudioDeviceCallback(deviceCallback)
+        if (scoReceiverRegistered) {
+            appContext.unregisterReceiver(scoReceiver)
+            scoReceiverRegistered = false
+        }
         listener = null
         closed = true
     }
@@ -140,21 +169,27 @@ class AudioRouteController(context: Context) {
             @Suppress("DEPRECATION")
             when (route) {
                 CallAudioRoute.DEFAULT -> {
-                    audio.isBluetoothScoOn = false
-                    audio.stopBluetoothSco()
+                    stopLegacyScoIfRequested()
                     audio.isSpeakerphoneOn = false
                 }
                 CallAudioRoute.SPEAKER -> {
-                    audio.isBluetoothScoOn = false
-                    audio.stopBluetoothSco()
+                    stopLegacyScoIfRequested()
                     audio.isSpeakerphoneOn = true
                 }
                 CallAudioRoute.BLUETOOTH -> {
                     audio.isSpeakerphoneOn = false
                     audio.startBluetoothSco()
-                    audio.isBluetoothScoOn = true
+                    legacyScoRequested = true
                 }
             }
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun stopLegacyScoIfRequested() {
+        if (legacyScoRequested) {
+            audio.stopBluetoothSco()
+            legacyScoRequested = false
         }
     }
 
@@ -187,6 +222,8 @@ class AudioRouteController(context: Context) {
 
     private fun isBluetoothCommunicationDevice(type: Int): Boolean =
         type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO ||
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.S &&
+                type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP) ||
             (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
                 type == AudioDeviceInfo.TYPE_BLE_HEADSET) ||
             (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P &&
@@ -204,7 +241,7 @@ class AudioRouteController(context: Context) {
         }
         @Suppress("DEPRECATION")
         return when {
-            audio.isBluetoothScoOn -> CallAudioRoute.BLUETOOTH
+            audio.isBluetoothScoOn || selectedRoute == CallAudioRoute.BLUETOOTH -> CallAudioRoute.BLUETOOTH
             audio.isSpeakerphoneOn -> CallAudioRoute.SPEAKER
             else -> CallAudioRoute.DEFAULT
         }
