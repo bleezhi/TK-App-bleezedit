@@ -4,6 +4,10 @@ Aplikacja telefoniczna dla **Telekomunikacji Kaliskiej**. Projekt obejmuje aplik
 
 **Wersja:** beta
 
+# UWAGA.
+*To nie jest oryginalny TK App. Jest to fork TK App przez @tehbleezspartan (discord), jednej osoby ze staffu TK.*
+Oryginalne repozytorium to https://github.com/pikus69420/TK-App
+
 ## Wersje aplikacji
 
 | Platforma | Technologia | Sposób dystrybucji |
