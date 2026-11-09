@@ -103,6 +103,14 @@ private slots:
         int errors=m_errors.size();invoke([](SipEngine *e){e->dial("sip:intruder@other-server");});QTRY_VERIFY(m_errors.size()>errors);QVERIFY(!m_active);
         invoke([](SipEngine *e){e->disconnectAccount();});QTRY_VERIFY(!m_registered);
     }
+    void cleanup() {
+        // A failed assertion must not leave a call active and cascade failures
+        // into later SIP scenarios in the same QtTest process.
+        if(m_engine && m_active) {
+            invoke([](SipEngine *e){e->hangup();});
+            QTRY_VERIFY_WITH_TIMEOUT(!m_active,5000);
+        }
+    }
     void cleanupTestCase() {
         if(m_engine&&m_thread.isRunning()){QMetaObject::invokeMethod(m_engine,[this]{m_engine->shutdown();},Qt::BlockingQueuedConnection);m_thread.quit();m_thread.wait();m_engine=nullptr;}
         m_peer.closeWriteChannel();if(!m_peer.waitForFinished(1500)){m_peer.kill();m_peer.waitForFinished(1500);}
