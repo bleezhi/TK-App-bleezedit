@@ -60,8 +60,8 @@ class AndroidSipEngine(
     private var incomingCall = false
     private var confirmed = false
     private var generation = 0
-    private var currentServer = "15.235.62.162"
-    private var currentPort = 5060
+    private var currentServer = TkSipProfile.server
+    private var currentPort = TkSipProfile.port
 
     fun setListener(value: ((SipUiState) -> Unit)?) {
         listener = value
@@ -83,8 +83,10 @@ class AndroidSipEngine(
 
         val username = config.username.trim()
         val password = config.password
-        val server = config.domain.trim()
-        val port = config.port
+        val server = TkSipProfile.server
+        val port = TkSipProfile.port
+        val identityDomain = config.identityDomain.trim()
+        val authUsername = config.authUsername.trim().ifEmpty { username }
         if (!username.matches(Regex("^[A-Za-z0-9_.!~*'()+%\\-]{1,128}$"))) {
             update { it.copy(error = "Wpisz poprawny login SIP.") }
             return
@@ -93,8 +95,8 @@ class AndroidSipEngine(
             update { it.copy(error = "Wpisz hasło SIP. Hasło nie jest zapisywane na urządzeniu.") }
             return
         }
-        if (server.isBlank() || server.any { !(it.isLetterOrDigit() || it == '.' || it == '-') } ||
-            port !in 1..65535
+        if (identityDomain.isNotEmpty() &&
+            !identityDomain.matches(Regex("^[A-Za-z0-9.\\-]+$"))
         ) {
             update { it.copy(error = "Nieprawidłowy serwer lub port SIP.") }
             return
@@ -143,11 +145,12 @@ class AndroidSipEngine(
             transport.setPort(0)
             ep.transportCreate(pjsip_transport_type_e.PJSIP_TRANSPORT_UDP, transport)
 
+            val identityHost = identityDomain.ifBlank { server }
             val identity = if (config.displayName.isBlank()) {
-                "sip:$username@$server"
+                "sip:$username@$identityHost"
             } else {
                 val display = config.displayName.replace("\\", "\\\\").replace("\"", "\\\"")
-                "\"$display\" <sip:$username@$server>"
+                "\"$display\" <sip:$username@$identityHost>"
             }
             val accountConfig = AccountConfig()
             accountConfig.setIdUri(identity)
@@ -157,7 +160,7 @@ class AndroidSipEngine(
             accountConfig.getRegConfig().setFirstRetryIntervalSec(5)
             accountConfig.getRegConfig().setRegisterOnAdd(true)
             accountConfig.getSipConfig().getAuthCreds().add(
-                AuthCredInfo("Digest", "*", username, 0, password)
+                AuthCredInfo("Digest", "*", authUsername, 0, password)
             )
 
             // Match the desktop startup order: start the PJSUA endpoint before
