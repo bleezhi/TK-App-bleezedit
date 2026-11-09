@@ -24,7 +24,7 @@ class SipProfileTest {
 
     @Test
     fun identityUriUsesRegistrarHostByDefault() {
-        assertEquals("sip:account42@15.235.62.162", TkSipProfile.identityUri(SipAccount(username = "account42")))
+        assertEquals("sip:account42@15.235.62.162", TkSipProfile.identityUri(SipAccount(username = "account42", displayName = "")))
     }
 
     @Test
