@@ -26,5 +26,13 @@ mkdir -p "$STAGE/licenses"
 cp -r "$ROOT/packaging/licenses/." "$STAGE/licenses/"
 cp "$ROOT/packaging/branding/README.md" "$STAGE/licenses/TELEKOMUNIKACJA-KALISKA-LOGO.md"
 printf '[Paths]\nPlugins=.\n' > "$STAGE/qt.conf"
-(cd "$OUTPUT" && cmake -E tar cf TK-App-2.0.0-Windows-x64.zip --format=zip TK-App-Windows-x64)
-echo "Ready: $OUTPUT/TK-App-2.0.0-Windows-x64.zip"
+VERSION="$(python3 - "$ROOT/CMakeLists.txt" <<'PY'
+import pathlib,re,sys
+m=re.search(r'project\s*\(\s*TKApp\s+VERSION\s+([0-9]+(?:\.[0-9]+){0,3})\b',pathlib.Path(sys.argv[1]).read_text(),re.I)
+if not m: sys.exit('Cannot read version from CMakeLists.txt.')
+print(m.group(1))
+PY
+)"
+(cd "$OUTPUT" && cmake -E tar cf "TK-App-$VERSION-Windows-x64.zip" --format=zip TK-App-Windows-x64)
+"$ROOT/scripts/package-windows-installer.sh" "$STAGE" "$OUTPUT"
+echo "Ready: $OUTPUT/TK-App-$VERSION-Windows-x64.zip"
