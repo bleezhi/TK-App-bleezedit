@@ -24,6 +24,7 @@ jobs:
           path: |
             releases/*.AppImage
             releases/*.deb
+            releases/TK-App-Linux-Setup-x86_64.zip
             releases/*.sha256
   windows:
     runs-on: windows-latest
