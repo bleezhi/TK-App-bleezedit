@@ -12,7 +12,7 @@ Oryginalne repozytorium to https://github.com/pikus69420/TK-App
 
 | Platforma | Technologia | Sposób dystrybucji |
 |---|---|---|
-| Linux | Qt / CMake | AppImage, pakiet DEB |
+| Linux | Qt / CMake | Setup ZIP (samodzielny instalator), AppImage, pakiet DEB |
 | Windows | Qt / CMake | Instalator EXE (Inno Setup), archiwum ZIP |
 | Android | Kotlin / Jetpack Compose / PJSUA2 | APK |
 
@@ -20,26 +20,26 @@ Aplikacja desktopowa pozostaje główną, istniejącą implementacją. Klient An
 
 ## Instalacja
 
+### Linux
+
+Pobierz `TK-App-Linux-Setup-x86_64.zip` z artefaktów GitHub Actions, rozpakuj całe archiwum i uruchom:
+
+```sh
+cd TK-App-Linux-Setup
+./setup.sh
+```
+
+Instalator kopiuje aplikację i biblioteki do `~/.local/opt/tk-app`, tworzy polecenie `~/.local/bin/tk-app` i wpis w menu aplikacji. Nie wymaga roota ani nie instaluje pakietów systemowych bez zgody użytkownika. Usuwanie: `./uninstall.sh` z rozpakowanego katalogu instalatora.
+
+Alternatywnie:
+- **Debian / Ubuntu:** `sudo apt install ./TK-App-*-amd64.deb`
+- **Pozostałe dystrybucje x86_64:** uruchom `chmod +x TK-App-*-x86_64.AppImage && ./TK-App-*-x86_64.AppImage`
+
+Setup ZIP zawiera aplikację i większość bibliotek Qt/PJSIP/audio. Nadal korzysta z systemowego glibc, sterowników grafiki i serwera wyświetlania; szczegóły zależności są w dołączonym `README.txt`.
+
 ### Windows
 
 Pobierz plik `TK-App-*-Windows-x64-Setup.exe` z artefaktów GitHub Actions lub z wydania projektu i uruchom instalator. Kreator pozwala wybrać katalog instalacji; może utworzyć skrót w menu Start oraz opcjonalnie na pulpicie. Deinstalator jest dostępny w ustawieniach systemu Windows.
-
-### Linux
-
-**Debian / Ubuntu i dystrybucje zgodne z DEB:**
-
-```sh
-sudo apt install ./TK-App-*-amd64.deb
-```
-
-**Pozostałe dystrybucje x86_64:**
-
-```sh
-chmod +x TK-App-*-x86_64.AppImage
-./TK-App-*-x86_64.AppImage
-```
-
-AppImage nie wymaga instalacji w systemie. Wymaga działającego środowiska graficznego X11/XWayland i zgodnej wersji glibc.
 
 ## Funkcje
 
@@ -126,7 +126,7 @@ Aplikacja desktopowa korzysta z Qt i CMake. Szczegóły konfiguracji oraz zależ
 
 ## Automatyczne budowanie (GitHub Actions)
 
-GitHub Actions automatycznie buduje i testuje aplikację desktopową dla Linux i Windows. Dla Linux powstają pliki `.AppImage` i `.deb`; dla Windows — instalator `.exe` oraz przenośne archiwum `.zip`. Workflow Androida uruchamia się po zmianach w kodzie Androida, dla pull requestów obejmujących ten kod oraz dla tagów wersji.
+GitHub Actions automatycznie buduje i testuje aplikację desktopową dla Linux i Windows. Dla Linux powstają pliki `.AppImage`, `.deb` i `TK-App-Linux-Setup-x86_64.zip`; dla Windows — instalator `.exe` oraz przenośne archiwum `.zip`. Workflow Androida uruchamia się po zmianach w kodzie Androida, dla pull requestów obejmujących ten kod oraz dla tagów wersji.
 
 Gotowe pliki można znaleźć w sekcji **Actions → wybrane uruchomienie workflow → Artifacts**.
 
