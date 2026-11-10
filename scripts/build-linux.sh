@@ -13,3 +13,4 @@ ctest --test-dir "$ROOT/build" --output-on-failure
 OUTPUT="${TK_OUTPUT_DIR:-$ROOT/releases}"
 "$ROOT/scripts/package-appimage.sh" "$ROOT/build/tk-app" "$OUTPUT"
 "$ROOT/scripts/package-deb.sh" "$ROOT/build/tk-app" "$OUTPUT"
+"$ROOT/scripts/package-linux-setup.sh" "$ROOT/build/tk-app" "$OUTPUT"
