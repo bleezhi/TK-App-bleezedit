@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BINARY="${1:-$ROOT/build/tk-app}"
 OUTPUT="${2:-${TK_OUTPUT_DIR:-$ROOT/releases}}"
 WORK="${TK_LINUX_SETUP_WORK:-$ROOT/.cache/linux-setup}"
-for command in python3 ldd patchelf zip; do
+for command in python3 ldd patchelf; do
     command -v "$command" >/dev/null || { echo "Missing required command: $command" >&2; exit 1; }
 done
 [[ -f "$BINARY" ]] || { echo "Linux executable not found: $BINARY" >&2; exit 1; }
