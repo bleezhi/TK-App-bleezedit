@@ -13,6 +13,28 @@ data class CallRecord(
     val durationSeconds: Long
 )
 
+internal object CallHistoryRecordFactory {
+    fun create(
+        peer: String,
+        incoming: Boolean,
+        confirmed: Boolean,
+        startedAt: Long,
+        durationSeconds: Long
+    ): CallRecord {
+        val direction = when {
+            incoming && !confirmed -> CallDirection.MISSED
+            incoming -> CallDirection.INCOMING
+            else -> CallDirection.OUTGOING
+        }
+        return CallRecord(
+            peer = peer.ifBlank { "Nieznany numer" },
+            direction = direction,
+            startedAt = startedAt,
+            durationSeconds = durationSeconds.coerceAtLeast(0L)
+        )
+    }
+}
+
 class CallHistoryStore(context: Context) {
     private val prefs = context.getSharedPreferences("call_history", Context.MODE_PRIVATE)
 
