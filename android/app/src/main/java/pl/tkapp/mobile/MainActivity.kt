@@ -61,8 +61,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val accountStore = SipAccountStore(this)
         val historyStore = CallHistoryStore(this)
+        var callHistory by mutableStateOf(historyStore.load())
         sipEngine = AndroidSipEngine(AudioRouteController(this))
         sipEngine.setListener { sipUiState = it }
+        sipEngine.setCallFinishedListener { record ->
+            historyStore.add(record)
+            callHistory = historyStore.load()
+        }
 
         setContent {
             val systemDark = isSystemInDarkTheme()
@@ -72,7 +77,7 @@ class MainActivity : ComponentActivity() {
                     dark = dark,
                     sipState = sipUiState,
                     initialAccount = accountStore.load(),
-                    history = historyStore.load(),
+                    history = callHistory,
                     onToggleTheme = { dark = !dark },
                     onSaveAccount = { accountStore.save(it) },
                     onConnect = {
@@ -80,7 +85,10 @@ class MainActivity : ComponentActivity() {
                         connectWithAudioPermission(it)
                     },
                     onDisconnect = { sipEngine.disconnect() },
-                    onClearHistory = { historyStore.clear() },
+                    onClearHistory = {
+                        historyStore.clear()
+                        callHistory = emptyList()
+                    },
                     onDial = { sipEngine.dial(it) },
                     onAnswer = { sipEngine.answer() },
                     onHangup = { sipEngine.hangup() },
