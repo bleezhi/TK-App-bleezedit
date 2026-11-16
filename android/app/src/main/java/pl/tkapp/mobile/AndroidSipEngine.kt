@@ -2,6 +2,7 @@ package pl.tkapp.mobile
 
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import org.pjsip.pjsua2.Account
 import org.pjsip.pjsua2.AccountConfig
 import org.pjsip.pjsua2.AudioMedia
@@ -64,6 +65,11 @@ class AndroidSipEngine(
     private var generation = 0
     private var currentServer = TkSipProfile.server
     private var currentPort = TkSipProfile.port
+    private var callStartedAtEpochMs = 0L
+    private var callConnectedAtElapsedMs = 0L
+    private var outgoingTimeout: Runnable? = null
+    private var outgoingTimedOut = false
+    private var callFinishedListener: ((CallRecord) -> Unit)? = null
 
     init {
         audioRoutes.setListener { snapshot ->
@@ -86,6 +92,10 @@ class AndroidSipEngine(
     }
 
     fun currentState(): SipUiState = state
+
+    fun setCallFinishedListener(value: ((CallRecord) -> Unit)?) {
+        callFinishedListener = value
+    }
 
     fun connect(config: SipAccount) {
         if (!onMainThread()) {
@@ -245,10 +255,14 @@ class AndroidSipEngine(
             activeCall = call
             incomingCall = false
             confirmed = false
+            callStartedAtEpochMs = System.currentTimeMillis()
+            callConnectedAtElapsedMs = 0L
+            outgoingTimedOut = false
             val params = CallOpParam(true)
             params.getOpt().setAudioCount(1)
             params.getOpt().setVideoCount(0)
             call.makeCall("sip:$number@$currentServer:$currentPort;transport=udp", params)
+            scheduleOutgoingTimeout(call)
             update {
                 it.copy(
                     callPhase = "connecting",
@@ -260,8 +274,11 @@ class AndroidSipEngine(
                 )
             }
         } catch (error: Exception) {
+            cancelOutgoingTimeout()
             activeCall?.let { safeDelete(it) }
             activeCall = null
+            callStartedAtEpochMs = 0L
+            callConnectedAtElapsedMs = 0L
             update { it.copy(callPhase = "idle", peer = "", error = error.message ?: "Nie udało się rozpocząć połączenia.") }
         }
     }
@@ -345,6 +362,28 @@ class AndroidSipEngine(
         }
     }
 
+    private fun scheduleOutgoingTimeout(call: TkCall) {
+        cancelOutgoingTimeout()
+        val timeout = Runnable {
+            if (activeCall !== call || incomingCall || confirmed) return@Runnable
+            outgoingTimedOut = true
+            try {
+                val params = CallOpParam(true)
+                params.setStatusCode(pjsip_status_code.PJSIP_SC_REQUEST_TIMEOUT)
+                call.hangup(params)
+            } catch (error: Exception) {
+                update { it.copy(error = error.message ?: "Upłynął czas oczekiwania na odebranie połączenia.") }
+            }
+        }
+        outgoingTimeout = timeout
+        main.postDelayed(timeout, OUTGOING_CALL_TIMEOUT_MS)
+    }
+
+    private fun cancelOutgoingTimeout() {
+        outgoingTimeout?.let(main::removeCallbacks)
+        outgoingTimeout = null
+    }
+
     private fun configureCodecs(ep: Endpoint) {
         val codecs: CodecInfoVector2 = ep.codecEnum2()
         for (index in 0 until codecs.size) {
@@ -396,6 +435,9 @@ class AndroidSipEngine(
             activeCall = call
             incomingCall = true
             confirmed = false
+            callStartedAtEpochMs = System.currentTimeMillis()
+            callConnectedAtElapsedMs = 0L
+            outgoingTimedOut = false
             val peer = try { call.getInfo().getRemoteUri() } catch (_: Exception) { "Nieznany numer" }
             try {
                 val ringing = CallOpParam(true)
@@ -427,11 +469,28 @@ class AndroidSipEngine(
             if (callbackGeneration != generation || activeCall !== call) return@post
             when (callState) {
                 pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED -> {
+                    val recordPeer = peer.ifBlank { state.peer }.ifBlank { "Nieznany numer" }
+                    val startedAt = callStartedAtEpochMs.takeIf { it > 0L } ?: System.currentTimeMillis()
+                    val duration = if (callConnectedAtElapsedMs > 0L) {
+                        ((SystemClock.elapsedRealtime() - callConnectedAtElapsedMs) / 1000L).coerceAtLeast(0L)
+                    } else 0L
+                    val record = CallHistoryRecordFactory.create(
+                        peer = recordPeer,
+                        incoming = incomingCall,
+                        confirmed = confirmed,
+                        startedAt = startedAt,
+                        durationSeconds = duration
+                    )
+                    val terminalError = if (outgoingTimedOut) "Połączenie nie zostało odebrane w ciągu 60 sekund." else null
+                    cancelOutgoingTimeout()
                     disconnectAudio(call)
                     safeDelete(call)
                     activeCall = null
                     incomingCall = false
                     confirmed = false
+                    callStartedAtEpochMs = 0L
+                    callConnectedAtElapsedMs = 0L
+                    outgoingTimedOut = false
                     update {
                         it.copy(
                             callPhase = "idle",
@@ -440,12 +499,15 @@ class AndroidSipEngine(
                             confirmed = false,
                             muted = false,
                             speaker = false,
-                            error = null
+                            error = terminalError
                         )
                     }
+                    callFinishedListener?.invoke(record)
                 }
                 pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED -> {
+                    if (!confirmed) callConnectedAtElapsedMs = SystemClock.elapsedRealtime()
                     confirmed = true
+                    cancelOutgoingTimeout()
                     audioRoutes.beginCall()
                     update {
                         it.copy(
@@ -501,6 +563,7 @@ class AndroidSipEngine(
 
     private fun destroyEndpoint() {
         generation++
+        cancelOutgoingTimeout()
         val ep = endpoint
         try {
             ep?.libDestroy()
@@ -517,6 +580,9 @@ class AndroidSipEngine(
         callAudio = null
         incomingCall = false
         confirmed = false
+        callStartedAtEpochMs = 0L
+        callConnectedAtElapsedMs = 0L
+        outgoingTimedOut = false
         audioRoutes.endCall()
     }
 
@@ -536,6 +602,10 @@ class AndroidSipEngine(
             }
         } catch (_: Exception) {
         }
+    }
+
+    private companion object {
+        const val OUTGOING_CALL_TIMEOUT_MS = 60_000L
     }
 
     private class TkAccount(
