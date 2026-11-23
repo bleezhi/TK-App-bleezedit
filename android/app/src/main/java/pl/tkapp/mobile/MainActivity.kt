@@ -73,7 +73,8 @@ class MainActivity : ComponentActivity() {
 
         override fun onServiceDisconnected(name: ComponentName?) {
             sipService = null
-            serviceBound = false
+            // The binding remains active after onServiceDisconnected(); Android
+            // may reconnect it, and onStop() is still responsible for unbinding.
             sipUiState = SipUiState(registrationText = "Usługa SIP niedostępna")
         }
     }
@@ -129,7 +130,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        bindService(
+        serviceBound = bindService(
             Intent(this, SipForegroundService::class.java),
             serviceConnection,
             Context.BIND_AUTO_CREATE
