@@ -1,8 +1,13 @@
 package pl.tkapp.mobile
 
 import android.Manifest
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.IBinder
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,9 +46,37 @@ import java.util.Locale
 private val TkYellow = Color(0xFFFFD000)
 
 class MainActivity : ComponentActivity() {
-    private lateinit var sipEngine: AndroidSipEngine
+    private lateinit var accountStore: SipAccountStore
+    private lateinit var historyStore: CallHistoryStore
+    private var callHistory by mutableStateOf<List<CallRecord>>(emptyList())
     private var sipUiState by mutableStateOf(SipUiState())
+    private var sipService: SipForegroundService? = null
+    private var serviceBound = false
     private var pendingAccount: SipAccount? = null
+
+    private val stateListener: (SipUiState) -> Unit = { sipUiState = it }
+    private val historyListener: () -> Unit = { callHistory = historyStore.load() }
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+            val localBinder = binder as? SipForegroundService.LocalBinder ?: return
+            sipService = localBinder.service
+            serviceBound = true
+            sipService?.addStateListener(stateListener)
+            sipService?.addHistoryListener(historyListener)
+            callHistory = historyStore.load()
+            pendingAccount?.let { account ->
+                pendingAccount = null
+                sipService?.startSip(account)
+            }
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            sipService = null
+            serviceBound = false
+            sipUiState = SipUiState(registrationText = "Usługa SIP niedostępna")
+        }
+    }
 
     private val audioPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -51,7 +84,7 @@ class MainActivity : ComponentActivity() {
         val account = pendingAccount
         pendingAccount = null
         if (granted && account != null) {
-            sipEngine.connect(account)
+            startSipService(account)
         } else if (!granted) {
             Toast.makeText(this, "Mikrofon jest wymagany do połączeń SIP.", Toast.LENGTH_LONG).show()
         }
@@ -59,15 +92,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val accountStore = SipAccountStore(this)
-        val historyStore = CallHistoryStore(this)
-        var callHistory by mutableStateOf(historyStore.load())
-        sipEngine = AndroidSipEngine(AudioRouteController(this))
-        sipEngine.setListener { sipUiState = it }
-        sipEngine.setCallFinishedListener { record ->
-            historyStore.add(record)
-            callHistory = historyStore.load()
-        }
+        accountStore = SipAccountStore(this)
+        historyStore = CallHistoryStore(this)
+        callHistory = historyStore.load()
 
         setContent {
             val systemDark = isSystemInDarkTheme()
@@ -84,28 +111,40 @@ class MainActivity : ComponentActivity() {
                         accountStore.save(it)
                         connectWithAudioPermission(it)
                     },
-                    onDisconnect = { sipEngine.disconnect() },
+                    onDisconnect = { sipService?.disconnect() },
                     onClearHistory = {
                         historyStore.clear()
                         callHistory = emptyList()
                     },
-                    onDial = { sipEngine.dial(it) },
-                    onAnswer = { sipEngine.answer() },
-                    onHangup = { sipEngine.hangup() },
-                    onMutedChanged = { sipEngine.setMuted(it) },
-                    onSpeakerChanged = { sipEngine.setSpeakerEnabled(it) },
-                    onAudioRouteChanged = { sipEngine.setAudioRoute(it) }
+                    onDial = { sipService?.dial(it) },
+                    onAnswer = { sipService?.answer() },
+                    onHangup = { sipService?.hangup() },
+                    onMutedChanged = { sipService?.setMuted(it) },
+                    onSpeakerChanged = { sipService?.setSpeakerEnabled(it) },
+                    onAudioRouteChanged = { sipService?.setAudioRoute(it) }
                 )
             }
         }
     }
 
-    override fun onDestroy() {
-        if (::sipEngine.isInitialized) {
-            sipEngine.setListener(null)
-            sipEngine.release()
+    override fun onStart() {
+        super.onStart()
+        bindService(
+            Intent(this, SipForegroundService::class.java),
+            serviceConnection,
+            Context.BIND_AUTO_CREATE
+        )
+    }
+
+    override fun onStop() {
+        if (serviceBound) {
+            sipService?.removeStateListener(stateListener)
+            sipService?.removeHistoryListener(historyListener)
+            unbindService(serviceConnection)
+            serviceBound = false
+            sipService = null
         }
-        super.onDestroy()
+        super.onStop()
     }
 
     private fun connectWithAudioPermission(account: SipAccount) {
@@ -113,7 +152,27 @@ class MainActivity : ComponentActivity() {
             pendingAccount = account
             audioPermissionRequest.launch(Manifest.permission.RECORD_AUDIO)
         } else {
-            sipEngine.connect(account)
+            startSipService(account)
+        }
+    }
+
+    private fun startSipService(account: SipAccount) {
+        pendingAccount = account
+        try {
+            startForegroundService(
+                Intent(this, SipForegroundService::class.java).setAction(SipForegroundService.ACTION_START)
+            )
+            sipService?.let { service ->
+                pendingAccount = null
+                service.startSip(account)
+            }
+        } catch (error: Exception) {
+            pendingAccount = null
+            Toast.makeText(
+                this,
+                error.message ?: "Nie udało się uruchomić usługi SIP w tle.",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 }
