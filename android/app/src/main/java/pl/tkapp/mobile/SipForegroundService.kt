@@ -105,7 +105,10 @@ class SipForegroundService : Service() {
         val notification = buildNotification(engine.currentState())
         when {
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE -> {
-                val types = ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL or
+                // This is a self-managed SIP stack, not an Android Telecom
+                // ConnectionService, so declare the specific SIP use case as
+                // specialUse rather than claiming the phoneCall type.
+                val types = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE or
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
                 startForeground(NOTIFICATION_ID, notification, types)
             }
